@@ -1,211 +1,154 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
+import { login, register, clearError } from '../../store/slices/authSlice';
 import {
   Container,
-  Box,
+  Paper,
   Typography,
   TextField,
   Button,
-  Tab,
-  Tabs,
+  Box,
   Alert,
-  Card,
-  CardContent,
-  Divider,
+  Tab,
+  Tabs
 } from '@mui/material';
 
 const Authentication = () => {
   const [activeTab, setActiveTab] = useState(0);
-  const [loginData, setLoginData] = useState({ email: '', password: '' });
-  const [registerData, setRegisterData] = useState({
-    firstName: '',
-    lastName: '',
+  const [formData, setFormData] = useState({
     email: '',
     password: '',
-    confirmPassword: ''
+    username: '',
+    firstName: '',
+    lastName: ''
   });
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
 
-  const handleTabChange = (event, newValue) => {
-    setActiveTab(newValue);
-    setError('');
-    setSuccess('');
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const { error, isLoading } = useSelector((state) => state.auth);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value
+    }));
+    if (error) dispatch(clearError());
   };
 
-  const handleLoginSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Implémenter la logique de connexion ici
-    console.log('Login submitted:', loginData);
-  };
-
-  const handleRegisterSubmit = (e) => {
-    e.preventDefault();
-    if (registerData.password !== registerData.confirmPassword) {
-      setError('Les mots de passe ne correspondent pas');
-      return;
+    
+    if (activeTab === 0) {
+      // Login
+      const result = await dispatch(login({
+        email: formData.email,
+        password: formData.password
+      }));
+      
+      if (!result.error) {
+        navigate('/');
+      }
+    } else {
+      // Register
+      const result = await dispatch(register({
+        email: formData.email,
+        password: formData.password,
+        username: formData.username,
+        firstName: formData.firstName,
+        lastName: formData.lastName
+      }));
+      
+      if (!result.error) {
+        navigate('/');
+      }
     }
-    // Implémenter la logique d'inscription ici
-    console.log('Register submitted:', registerData);
-  };
-
-  const handleLoginChange = (e) => {
-    const { name, value } = e.target;
-    setLoginData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
-  const handleRegisterChange = (e) => {
-    const { name, value } = e.target;
-    setRegisterData(prev => ({
-      ...prev,
-      [name]: value
-    }));
   };
 
   return (
     <Container maxWidth="sm" className="py-8">
-      <Card className="shadow-lg">
-        <CardContent>
-          <Typography variant="h4" className="text-center mb-6">
-            {activeTab === 0 ? 'Connexion' : 'Créer un compte'}
-          </Typography>
+      <Paper elevation={3} className="p-6">
+        <Tabs
+          value={activeTab}
+          onChange={(e, newValue) => setActiveTab(newValue)}
+          className="mb-4"
+          centered
+        >
+          <Tab label="Connexion" />
+          <Tab label="Inscription" />
+        </Tabs>
 
-          <Tabs
-            value={activeTab}
-            onChange={handleTabChange}
-            centered
-            className="mb-4"
-          >
-            <Tab label="Se connecter" />
-            <Tab label="S'inscrire" />
-          </Tabs>
+        {error && (
+          <Alert severity="error" className="mb-4">
+            {error}
+          </Alert>
+        )}
 
-          {error && (
-            <Alert severity="error" className="mb-4">
-              {error}
-            </Alert>
-          )}
-
-          {success && (
-            <Alert severity="success" className="mb-4">
-              {success}
-            </Alert>
-          )}
-
-          {activeTab === 0 ? (
-            // Formulaire de connexion
-            <form onSubmit={handleLoginSubmit}>
-              <Box className="space-y-4">
+        <form onSubmit={handleSubmit}>
+          <Box className="space-y-4">
+            {activeTab === 1 && (
+              <>
                 <TextField
-                  required
                   fullWidth
-                  label="Email"
-                  name="email"
-                  type="email"
-                  value={loginData.email}
-                  onChange={handleLoginChange}
+                  label="Nom d'utilisateur"
+                  name="username"
+                  value={formData.username}
+                  onChange={handleChange}
+                  required
                 />
                 <TextField
-                  required
-                  fullWidth
-                  label="Mot de passe"
-                  name="password"
-                  type="password"
-                  value={loginData.password}
-                  onChange={handleLoginChange}
-                />
-                <Button
-                  type="submit"
-                  variant="contained"
-                  color="primary"
-                  fullWidth
-                  size="large"
-                >
-                  Se connecter
-                </Button>
-              </Box>
-            </form>
-          ) : (
-            // Formulaire d'inscription
-            <form onSubmit={handleRegisterSubmit}>
-              <Box className="space-y-4">
-                <TextField
-                  required
                   fullWidth
                   label="Prénom"
                   name="firstName"
-                  value={registerData.firstName}
-                  onChange={handleRegisterChange}
+                  value={formData.firstName}
+                  onChange={handleChange}
                 />
                 <TextField
-                  required
                   fullWidth
                   label="Nom"
                   name="lastName"
-                  value={registerData.lastName}
-                  onChange={handleRegisterChange}
+                  value={formData.lastName}
+                  onChange={handleChange}
                 />
-                <TextField
-                  required
-                  fullWidth
-                  label="Email"
-                  name="email"
-                  type="email"
-                  value={registerData.email}
-                  onChange={handleRegisterChange}
-                />
-                <TextField
-                  required
-                  fullWidth
-                  label="Mot de passe"
-                  name="password"
-                  type="password"
-                  value={registerData.password}
-                  onChange={handleRegisterChange}
-                />
-                <TextField
-                  required
-                  fullWidth
-                  label="Confirmer le mot de passe"
-                  name="confirmPassword"
-                  type="password"
-                  value={registerData.confirmPassword}
-                  onChange={handleRegisterChange}
-                />
-                <Button
-                  type="submit"
-                  variant="contained"
-                  color="primary"
-                  fullWidth
-                  size="large"
-                >
-                  Créer un compte
-                </Button>
-              </Box>
-            </form>
-          )}
+              </>
+            )}
 
-          <Divider className="my-4" />
-          
-          <Box className="text-center">
-            <Typography variant="body2" color="text.secondary">
-              {activeTab === 0 ? (
-                "Vous n'avez pas de compte ?"
-              ) : (
-                "Vous avez déjà un compte ?"
-              )}
-              <Button
-                color="primary"
-                onClick={() => setActiveTab(activeTab === 0 ? 1 : 0)}
-              >
-                {activeTab === 0 ? "S'inscrire" : "Se connecter"}
-              </Button>
-            </Typography>
+            <TextField
+              fullWidth
+              type="email"
+              label="Email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              required
+            />
+            <TextField
+              fullWidth
+              type="password"
+              label="Mot de passe"
+              name="password"
+              value={formData.password}
+              onChange={handleChange}
+              required
+            />
+
+            <Button
+              type="submit"
+              variant="contained"
+              color="primary"
+              fullWidth
+              disabled={isLoading}
+            >
+              {isLoading
+                ? 'Chargement...'
+                : activeTab === 0
+                ? 'Se connecter'
+                : "S'inscrire"}
+            </Button>
           </Box>
-        </CardContent>
-      </Card>
+        </form>
+      </Paper>
     </Container>
   );
 };

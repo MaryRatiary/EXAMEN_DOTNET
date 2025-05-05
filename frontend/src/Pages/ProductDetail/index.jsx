@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Container, 
   Grid, 
@@ -13,38 +13,51 @@ import {
   ImageListItem
 } from '@mui/material';
 import { useParams } from 'react-router-dom';
+import { useDispatch } from 'react-redux';
+import { addToCart } from '../../store/slices/cartSlice';
+import { productsAPI } from '../../services/api';
 
 const ProductDetail = () => {
   const { id } = useParams();
-  const [selectedTab, setSelectedTab] = useState(0);
+  const dispatch = useDispatch();
+  const [product, setProduct] = useState(null);
   const [quantity, setQuantity] = useState(1);
-  
-  // Ces données devraient venir de votre backend
-  const product = {
-    id: 1,
-    name: "Pierre Saphir de Madagascar",
-    price: 299.99,
-    description: "Magnifique saphir bleu authentique de Madagascar",
-    rating: 4.5,
-    reviews: 12,
-    stock: 5,
-    images: [
-      "/public/logooo.jpeg",
-      "/public/logooo.jpeg",
-      "/public/logooo.jpeg"
-    ],
-    details: {
-      origin: "Madagascar",
-      poids: "2.5 carats",
-      couleur: "Bleu profond",
-      certificat: "Certification internationale"
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [selectedTab, setSelectedTab] = useState(0);
+
+  useEffect(() => {
+    const fetchProduct = async () => {
+      try {
+        const response = await productsAPI.getById(id);
+        setProduct(response.data);
+        setLoading(false);
+      } catch (err) {
+        setError('Erreur lors du chargement du produit');
+        setLoading(false);
+      }
+    };
+
+    fetchProduct();
+  }, [id]);
+
+  const handleAddToCart = () => {
+    if (product) {
+      dispatch(addToCart({ ...product, quantity }));
     }
   };
 
-  const handleAddToCart = () => {
-    // Implémenter la logique d'ajout au panier
-    console.log('Ajouter au panier:', { productId: id, quantity });
-  };
+  if (loading) {
+    return <div className="container mx-auto px-4 py-8">Chargement...</div>;
+  }
+
+  if (error || !product) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-red-600">{error || 'Produit non trouvé'}</div>
+      </div>
+    );
+  }
 
   return (
     <Container maxWidth="xl" className="py-8">

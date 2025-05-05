@@ -1,37 +1,68 @@
 @import "tailwindcss";
 
-body{
+:root {
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
   font-family: "Winky Sans", sans-serif;
   font-optical-sizing: auto;
   font-weight: 400;
-  font-style:normal;
+  font-style: normal;
   background: #f5f0f0;
-
-
-} 
-header .top-strip{
-  border-top: 1px solid rgba(0,0,0,0.1);
-  border-bottom: 1px solid  rgba(0,0,0,0.1);
-
+  overflow-x: hidden;
+  min-height: 100vh;
 }
 
-.container{  
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+header .top-strip {
+  border-top: 1px solid rgba(0,0,0,0.1);
+  border-bottom: 1px solid rgba(0,0,0,0.1);
+}
+
+.container {  
   width: 100%;
-  margin: auto;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 1rem;
 } 
-.bg-org{
+
+/* Assurez-vous que le contenu principal prend l'espace disponible */
+main {
+  flex: 1 0 auto;
+  width: 100%;
+  position: relative;
+}
+
+/* Le footer reste en bas */
+footer {
+  flex-shrink: 0;
+}
+
+/* Utilitaires */
+.bg-org {
   background: #ff5252;
 }
-.link:hover{
+
+.link:hover {
   color: #0463cf !important;
 }
-/* nav button{
-  text-transform: captalize !important;
-  color: rgba(0,0,0,0.7) !important;
-  font: bold 1px; 
+
+/* Correction pour les problèmes de scroll */
+.no-scroll {
+  overflow: hidden;
 }
-nav button:hover{
-  text-transform: captalize !important;
-  color: #ff5252 !important;
-  
-} */

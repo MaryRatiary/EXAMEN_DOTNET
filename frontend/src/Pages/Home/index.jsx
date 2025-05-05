@@ -1,7 +1,44 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Typography, Container, Grid, Card, CardContent, CardMedia, Button, Box } from '@mui/material';
+import { productsAPI } from '../../services/api';
+import ProductCard from '../../components/ProductCard';
 
 const Home = () => {
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const response = await productsAPI.getAll();
+        setProducts(response.data);
+        setLoading(false);
+      } catch (err) {
+        setError('Erreur lors du chargement des produits');
+        setLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-center">Chargement...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-center text-red-600">{error}</div>
+      </div>
+    );
+  }
+
   return (
     <div className="home-page">
       {/* Hero Section */}
@@ -21,7 +58,7 @@ const Home = () => {
             </Grid>
             <Grid item xs={12} md={6}>
               <img 
-                src="/public/logooo.jpeg" 
+                src="/public/collection amethyste.jpeg" 
                 alt="Collections de pierres précieuses"
                 className="w-full rounded-lg shadow-xl"
               />
@@ -150,6 +187,17 @@ const Home = () => {
             </Button>
           </Box>
         </Container>
+      </div>
+
+      {/* Products Section */}
+      <div className="container mx-auto px-4 py-8">
+        <h1 className="text-3xl font-bold mb-8 text-center">Nos Pierres Précieuses</h1>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {products.map((product) => (
+            <ProductCard key={product.id} product={product} />
+          ))}
+        </div>
       </div>
     </div>
   );

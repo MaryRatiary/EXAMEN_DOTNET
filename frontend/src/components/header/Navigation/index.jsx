@@ -1,129 +1,234 @@
-import Button from '@mui/material/Button';
-import React, {useState} from 'react'
-import { RiMenu2Fill } from 'react-icons/ri';
-import { TfiAngleDoubleDown } from "react-icons/tfi";
+import React, { useState, useEffect } from 'react';
+import { Button, IconButton, InputBase, Badge, Avatar } from '@mui/material';
 import { Link, useNavigate } from 'react-router-dom';
+import { useSelector, useDispatch } from 'react-redux';
 import { GoRocket } from "react-icons/go";
-import CategoryPanel from './CategoryPanel';
+import { FiMenu, FiX, FiSearch, FiShoppingCart, FiUser } from "react-icons/fi";
+import { logout } from '../../../store/slices/authSlice';
 import "./style.css";
 
 const Navigation = () => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isScrolled, setIsScrolled] = useState(false);
   const navigate = useNavigate();
-  const [isOpenCatPanel, setIsOpenCatPanel] = useState(false);
-   
-  const openCategoryPanel = () => {
-    setIsOpenCatPanel(true)
-  }
+  const dispatch = useDispatch();
+  const { user } = useSelector((state) => state.auth);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 10);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const handleSearch = (e) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      navigate(`/search?q=${encodeURIComponent(searchQuery)}`);
+    }
+  };
+
+  const toggleMenu = () => {
+    setIsOpen(!isOpen);
+    // Bloquer le scroll quand le menu mobile est ouvert
+    if (!isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+  };
+
+  const handleLogout = () => {
+    dispatch(logout());
+    navigate('/');
+  };
+
+  const getInitials = (username) => {
+    return username ? username.charAt(0).toUpperCase() : 'U';
+  };
 
   return (
-    <>
-    <nav className='py-2'>
-      <div className='container flex items-center justify-end'>
-        <div className='col_1 w-[30%]'>
-          <Button className='!text-black gap-2' onClick={openCategoryPanel}>
-            <RiMenu2Fill className='text-[18px]' />
-            Shop By Categories 
-            <TfiAngleDoubleDown className='ml-auto text-[13px] font-bold cursor-pointer'/>
-          </Button>
-        </div>
-        <div className='col_2 w-[60%] text-[15px]'>
-          <ul className='flex items-center gap-5 nav'>
-            <li className='list-none'>
-              <Link to='/' className='link transition !font-[500]'> 
-                <Button className='link transition !text-[rgba(0,0,0,1)] hover:!text-blue-800'>Accueil</Button>
-              </Link>
-            </li>
+    <header className={`${isScrolled ? 'scrolled' : ''}`}>
+      <nav>
+        {/* Top bar with logo and search */}
+        <div className="container mx-auto px-4">
+          <div className="flex items-center justify-between h-[70px]">
+            {/* Logo and hamburger menu */}
+            <div className="flex items-center gap-4">
+              <IconButton 
+                className="lg:hidden"
+                onClick={toggleMenu}
+                aria-label="Menu"
+              >
+                {isOpen ? <FiX size={24} /> : <FiMenu size={24} />}
+              </IconButton>
               
-            <li className='list-none relative'>
-              <Link to='/products' className='link transition'>
-                <Button className='link transition !text-[rgba(0,0,0,1)] hover:!text-blue-800'>Pierres Précieuses</Button>
+              <Link to="/" className="logo-container">
+                <img src="/logooo.jpeg" alt="Logo" className="h-12 w-auto object-contain" />
               </Link>
-              <div className='submenu absolute top-[120%] left-[0%] min-w-[200px] bg-white shadow-md opacity-0 transition-all'>
-                <ul>
-                  <li className='list-none w-full'>
-                    <Link to="/products/saphirs" className="w-full">
-                      <Button className='!text-[rgba(0,0,0,0.8)] w-full !text-left !justify-start !rounded-none'>Saphirs</Button>
-                    </Link>
-                  </li>
-                  <li className='list-none w-full'>
-                    <Link to="/products/rubis" className="w-full">
-                      <Button className='!text-[rgba(0,0,0,0.8)] w-full !text-left !justify-start !rounded-none'>Rubis</Button>
-                    </Link>
-                  </li>
-                  <li className='list-none w-full'>
-                    <Link to="/products/emeraudes" className="w-full">
-                      <Button className='!text-[rgba(0,0,0,0.8)] w-full !text-left !justify-start !rounded-none'>Émeraudes</Button>
-                    </Link>
-                  </li>
-                  <li className='list-none w-full'>
-                    <Link to="/products/tourmalines" className="w-full">
-                      <Button className='!text-[rgba(0,0,0,0.8)] w-full !text-left !justify-start !rounded-none'>Tourmalines</Button>
-                    </Link>
-                  </li>
-                </ul>
-              </div>
-            </li>|
+            </div>
 
-            <li className='list-none relative'>
-              <Link to='/jewelry' className='link transition'> 
-                <Button className='link transition !text-[rgba(0,0,0,1)] hover:!text-blue-800'>Bijouterie</Button>
-              </Link>
-              <div className='submenu absolute top-[120%] left-[0%] min-w-[200px] bg-white shadow-md opacity-0 transition-all'>
-                <ul>
-                  <li className='list-none w-full'>
-                    <Link to="/jewelry/bagues" className="w-full">
-                      <Button className='!text-[rgba(0,0,0,0.8)] w-full !text-left !justify-start !rounded-none'>Bagues</Button>
-                    </Link>
-                  </li>
-                  <li className='list-none w-full'>
-                    <Link to="/jewelry/colliers" className="w-full">
-                      <Button className='!text-[rgba(0,0,0,0.8)] w-full !text-left !justify-start !rounded-none'>Colliers</Button>
-                    </Link>
-                  </li>
-                  <li className='list-none w-full'>
-                    <Link to="/jewelry/bracelets" className="w-full">
-                      <Button className='!text-[rgba(0,0,0,0.8)] w-full !text-left !justify-start !rounded-none'>Bracelets</Button>
-                    </Link>
-                  </li>
-                  <li className='list-none w-full'>
-                    <Link to="/jewelry/boucles" className="w-full">
-                      <Button className='!text-[rgba(0,0,0,0.8)] w-full !text-left !justify-start !rounded-none'>Boucles d'oreilles</Button>
-                    </Link>
-                  </li>
-                </ul>
-              </div>
-            </li>|
+            {/* Search bar - hidden on mobile */}
+            <form 
+              onSubmit={handleSearch}
+              className="hidden md:flex items-center flex-1 max-w-md mx-4 bg-gray-100 rounded-full px-4"
+            >
+              <InputBase
+                placeholder="Rechercher des produits..."
+                className="flex-1 py-2"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+              <IconButton type="submit" aria-label="search">
+                <FiSearch />
+              </IconButton>
+            </form>
 
-            <li className='list-none'>
-              <Link to='/about' className='link transition'> 
-                <Button className='link transition !text-[rgba(0,0,0,1)] hover:!text-blue-800'>À Propos</Button>
-              </Link>
-            </li>
+            {/* Navigation buttons */}
+            <div className="flex items-center gap-2">
+              {/* Search button for mobile */}
+              <IconButton 
+                className="md:hidden"
+                onClick={() => navigate('/search')}
+                aria-label="search"
+              >
+                <FiSearch />
+              </IconButton>
 
-            <li className='list-none'>
-              <Link to='/contact' className='link transition'> 
-                <Button className='link transition !text-[rgba(0,0,0,1)] hover:!text-blue-800'>Contact</Button>
-              </Link>
-            </li>
-          </ul>
+              {/* Cart button with badge */}
+              <IconButton 
+                onClick={() => navigate('/cart')}
+                aria-label="panier"
+                className="relative"
+              >
+                <Badge badgeContent={0} color="primary">
+                  <FiShoppingCart />
+                </Badge>
+              </IconButton>
+
+              {user ? (
+                <div className="hidden md:flex items-center gap-2">
+                  {user.isAdmin && (
+                    <Button
+                      variant="outlined"
+                      color="primary"
+                      onClick={() => navigate('/admin/dashboard')}
+                    >
+                      Dashboard
+                    </Button>
+                  )}
+                  <div className="flex items-center gap-2">
+                    <Avatar
+                      sx={{
+                        bgcolor: 'primary.main',
+                        cursor: 'pointer'
+                      }}
+                      onClick={() => navigate('/account')}
+                    >
+                      {getInitials(user.username)}
+                    </Avatar>
+                    <Button
+                      variant="outlined"
+                      color="primary"
+                      onClick={handleLogout}
+                      size="small"
+                    >
+                      Déconnexion
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="hidden md:flex items-center gap-2">
+                  <Button 
+                    variant="outlined" 
+                    color="primary"
+                    onClick={() => navigate('/auth/login')}
+                    startIcon={<FiUser />}
+                  >
+                    Connexion
+                  </Button>
+                  <Button 
+                    variant="contained" 
+                    color="primary"
+                    onClick={() => navigate('/auth/register')}
+                  >
+                    S'inscrire
+                  </Button>
+                </div>
+              )}
+
+              {/* Profile icon for mobile */}
+              {user ? (
+                <Avatar
+                  sx={{
+                    bgcolor: 'primary.main',
+                    cursor: 'pointer',
+                    display: { md: 'none' }
+                  }}
+                  onClick={() => navigate('/account')}
+                >
+                  {getInitials(user.username)}
+                </Avatar>
+              ) : (
+                <IconButton 
+                  className="md:hidden"
+                  onClick={() => navigate('/auth/login')}
+                  aria-label="profile"
+                >
+                  <FiUser />
+                </IconButton>
+              )}
+            </div>
+          </div>
         </div>
 
-        <div className='col_2 w-[20%]'>
-          <p className='text-[14px] font-[500] flex items-center mb-0 mt-0 gap-3 text-blue-800'> 
-            <GoRocket className='text-[18px] text-red-800'/>
-            Livraison internationale gratuite
-          </p>
+        {/* Menu mobile et navigation principale */}
+        <div 
+          className={`lg:block ${isOpen ? 'block' : 'hidden'} bg-white lg:relative fixed inset-0 top-0 z-50 overflow-y-auto`}
+          style={{ height: isOpen ? 'calc(100vh - 64px)' : 'auto' }}
+        >
+          <div className="container mx-auto px-4">
+            <ul className="lg:flex lg:items-center lg:justify-center lg:gap-5 flex flex-col lg:flex-row py-4 lg:py-2">
+              <li className="nav-item">
+                <Link to="/" className="nav-link" onClick={() => setIsOpen(false)}>Accueil</Link>
+              </li>
+              <li className="nav-item">
+                <div className="nav-link">
+                  Pierres Précieuses
+                  <div className="submenu z-100">
+                    <Link to="/products/saphirs" className="submenu-link" onClick={() => setIsOpen(false)}>Saphirs</Link>
+                    <Link to="/products/rubis" className="submenu-link" onClick={() => setIsOpen(false)}>Rubis</Link>
+                    <Link to="/products/emeraudes" className="submenu-link" onClick={() => setIsOpen(false)}>Émeraudes</Link>
+                    <Link to="/products/tourmalines" className="submenu-link" onClick={() => setIsOpen(false)}>Tourmalines</Link>
+                  </div>
+                </div>
+              </li>
+              <li className="nav-item">
+                <div className="nav-link">
+                  Bijouterie
+                  <div className="submenu">
+                    <Link to="/jewelry/bagues" className="submenu-link" onClick={() => setIsOpen(false)}>Bagues</Link>
+                    <Link to="/jewelry/colliers" className="submenu-link" onClick={() => setIsOpen(false)}>Colliers</Link>
+                    <Link to="/jewelry/bracelets" className="submenu-link" onClick={() => setIsOpen(false)}>Bracelets</Link>
+                    <Link to="/jewelry/boucles" className="submenu-link" onClick={() => setIsOpen(false)}>Boucles d'oreilles</Link>
+                  </div>
+                </div>
+              </li>
+              <li className="nav-item">
+                <Link to="/about" className="nav-link" onClick={() => setIsOpen(false)}>À Propos</Link>
+              </li>
+              <li className="nav-item">
+                <Link to="/contact" className="nav-link" onClick={() => setIsOpen(false)}>Contact</Link>
+              </li>
+            </ul>
+          </div>
         </div>
-      </div>
-    </nav>
-
-    <CategoryPanel 
-      openCategoryPanel={openCategoryPanel} 
-      isOpenCatPanel={isOpenCatPanel}
-      setIsOpenCatPanel={setIsOpenCatPanel}
-    />
-    </>
-  )   
-}
+      </nav>
+    </header>
+  );
+};
 
 export default Navigation;

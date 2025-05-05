@@ -1,50 +1,41 @@
 import React from 'react';
-import {
-  Container,
-  Typography,
-  Box,
-  Card,
-  CardContent,
-  Button,
-  Grid,
-  IconButton,
-  Divider,
-} from '@mui/material';
+import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
+import { Typography, Container, Grid, Card, CardContent, IconButton, Button, Box } from '@mui/material';
+import { Add as AddIcon, Remove as RemoveIcon, Delete as DeleteIcon } from '@mui/icons-material';
+import { updateQuantity, removeFromCart } from '../../store/slices/cartSlice';
 
 const Cart = () => {
+  const dispatch = useDispatch();
   const navigate = useNavigate();
-  // Exemple de données du panier (à remplacer par votre état réel)
-  const cartItems = [
-    {
-      id: 1,
-      name: "Saphir Bleu",
-      price: 299.99,
-      quantity: 1,
-      image: "/public/logooo.jpeg"
-    },
-    {
-      id: 2,
-      name: "Rubis Rouge",
-      price: 399.99,
-      quantity: 2,
-      image: "/public/logooo.jpeg"
-    }
-  ];
+  const { items, total } = useSelector((state) => state.cart);
 
-  const calculateTotal = () => {
-    return cartItems.reduce((total, item) => total + (item.price * item.quantity), 0);
+  const handleUpdateQuantity = (id, quantity) => {
+    dispatch(updateQuantity({ id, quantity }));
   };
 
-  const handleUpdateQuantity = (itemId, newQuantity) => {
-    // Implémenter la mise à jour de la quantité
-    console.log('Mise à jour quantité:', { itemId, newQuantity });
+  const handleRemoveItem = (id) => {
+    dispatch(removeFromCart(id));
   };
 
-  const handleRemoveItem = (itemId) => {
-    // Implémenter la suppression d'un article
-    console.log('Supprimer article:', itemId);
-  };
+  if (items.length === 0) {
+    return (
+      <Container maxWidth="lg" className="py-8">
+        <Box className="text-center">
+          <Typography variant="h5" className="mb-4">
+            Votre panier est vide
+          </Typography>
+          <Button 
+            variant="contained" 
+            color="primary" 
+            onClick={() => navigate('/')}
+          >
+            Continuer vos achats
+          </Button>
+        </Box>
+      </Container>
+    );
+  }
 
   return (
     <Container maxWidth="lg" className="py-8">
@@ -52,127 +43,102 @@ const Cart = () => {
         Votre Panier
       </Typography>
 
-      {cartItems.length === 0 ? (
-        <Box className="text-center py-8">
-          <Typography variant="h6" className="mb-4">
-            Votre panier est vide
-          </Typography>
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={() => navigate('/products')}
-          >
-            Continuer vos achats
-          </Button>
-        </Box>
-      ) : (
-        <Grid container spacing={4}>
-          <Grid item xs={12} md={8}>
-            {cartItems.map((item) => (
-              <Card key={item.id} className="mb-4">
-                <CardContent>
-                  <Grid container spacing={2} alignItems="center">
-                    <Grid item xs={3}>
-                      <img
-                        src={item.image}
-                        alt={item.name}
-                        className="w-full rounded-lg"
-                      />
-                    </Grid>
-                    <Grid item xs={9}>
-                      <Box className="flex justify-between items-start">
-                        <div>
-                          <Typography variant="h6" className="mb-2">
-                            {item.name}
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            Prix unitaire: {item.price.toLocaleString('fr-FR', {
-                              style: 'currency',
-                              currency: 'EUR'
-                            })}
-                          </Typography>
-                        </div>
-                        <IconButton
-                          onClick={() => handleRemoveItem(item.id)}
-                          color="error"
-                        >
-                          ×
-                        </IconButton>
-                      </Box>
-                      <Box className="flex items-center mt-4">
-                        <Button
-                          size="small"
-                          onClick={() => handleUpdateQuantity(item.id, item.quantity - 1)}
-                          disabled={item.quantity <= 1}
-                        >
-                          -
-                        </Button>
-                        <Typography className="mx-4">
-                          {item.quantity}
-                        </Typography>
-                        <Button
-                          size="small"
-                          onClick={() => handleUpdateQuantity(item.id, item.quantity + 1)}
-                        >
-                          +
-                        </Button>
-                        <Typography className="ml-auto" variant="h6">
-                          {(item.price * item.quantity).toLocaleString('fr-FR', {
-                            style: 'currency',
-                            currency: 'EUR'
-                          })}
-                        </Typography>
-                      </Box>
-                    </Grid>
-                  </Grid>
-                </CardContent>
-              </Card>
-            ))}
-          </Grid>
-
-          <Grid item xs={12} md={4}>
-            <Card className="sticky top-24">
+      <Grid container spacing={4}>
+        <Grid item xs={12} md={8}>
+          {items.map((item) => (
+            <Card key={item.id} className="mb-4">
               <CardContent>
-                <Typography variant="h6" className="mb-4">
-                  Résumé de la commande
-                </Typography>
-                <Box className="flex justify-between mb-2">
+                <Grid container spacing={2} alignItems="center">
+                  <Grid item xs={3}>
+                    <img
+                      src={item.imageUrl || '/placeholder.jpg'}
+                      alt={item.name}
+                      className="w-full rounded-lg"
+                    />
+                  </Grid>
+                  <Grid item xs={4}>
+                    <Typography variant="h6">{item.name}</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {item.price.toLocaleString('fr-FR', {
+                        style: 'currency',
+                        currency: 'EUR'
+                      })}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={3}>
+                    <Box className="flex items-center gap-2">
+                      <IconButton 
+                        onClick={() => handleUpdateQuantity(item.id, item.quantity - 1)}
+                        disabled={item.quantity <= 1}
+                      >
+                        <RemoveIcon />
+                      </IconButton>
+                      <Typography>{item.quantity}</Typography>
+                      <IconButton 
+                        onClick={() => handleUpdateQuantity(item.id, item.quantity + 1)}
+                      >
+                        <AddIcon />
+                      </IconButton>
+                    </Box>
+                  </Grid>
+                  <Grid item xs={2} className="text-right">
+                    <IconButton 
+                      color="error"
+                      onClick={() => handleRemoveItem(item.id)}
+                    >
+                      <DeleteIcon />
+                    </IconButton>
+                  </Grid>
+                </Grid>
+              </CardContent>
+            </Card>
+          ))}
+        </Grid>
+
+        <Grid item xs={12} md={4}>
+          <Card className="sticky top-24">
+            <CardContent>
+              <Typography variant="h6" className="mb-4">
+                Résumé de la commande
+              </Typography>
+              
+              <Box className="space-y-2 mb-4">
+                <Box className="flex justify-between">
                   <Typography>Sous-total</Typography>
                   <Typography>
-                    {calculateTotal().toLocaleString('fr-FR', {
+                    {total.toLocaleString('fr-FR', {
                       style: 'currency',
                       currency: 'EUR'
                     })}
                   </Typography>
                 </Box>
-                <Box className="flex justify-between mb-2">
+                <Box className="flex justify-between">
                   <Typography>Livraison</Typography>
                   <Typography>Gratuite</Typography>
                 </Box>
-                <Divider className="my-4" />
-                <Box className="flex justify-between mb-4">
-                  <Typography variant="h6">Total</Typography>
-                  <Typography variant="h6" color="primary">
-                    {calculateTotal().toLocaleString('fr-FR', {
+                <Box className="flex justify-between font-bold pt-2 border-t">
+                  <Typography>Total</Typography>
+                  <Typography>
+                    {total.toLocaleString('fr-FR', {
                       style: 'currency',
                       currency: 'EUR'
                     })}
                   </Typography>
                 </Box>
-                <Button
-                  variant="contained"
-                  color="primary"
-                  fullWidth
-                  size="large"
-                  onClick={() => navigate('/checkout')}
-                >
-                  Procéder au paiement
-                </Button>
-              </CardContent>
-            </Card>
-          </Grid>
+              </Box>
+
+              <Button 
+                variant="contained" 
+                color="primary" 
+                fullWidth
+                onClick={() => navigate('/checkout')}
+              >
+                Procéder au paiement
+              </Button>
+            </CardContent>
+          </Card>
         </Grid>
-      )}
+      </Grid>
     </Container>
   );
 };

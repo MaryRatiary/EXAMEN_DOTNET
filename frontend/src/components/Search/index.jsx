@@ -1,167 +1,106 @@
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Box,
   TextField,
-  InputAdornment,
   IconButton,
-  Paper,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemAvatar,
-  Avatar,
-  Typography,
-  Popper,
-  ClickAwayListener,
+  InputAdornment,
+  Autocomplete,
+  Paper
 } from '@mui/material';
+import { Search as SearchIcon } from '@mui/icons-material';
+import { productsAPI } from '../../services/api';
+import './style.css';
 
 const Search = () => {
-  const navigate = useNavigate();
-  const [searchTerm, setSearchTerm] = useState('');
+  const [query, setQuery] = useState('');
   const [suggestions, setSuggestions] = useState([]);
-  const [anchorEl, setAnchorEl] = useState(null);
   const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
-  // Exemple de données de suggestion (à remplacer par une vraie API)
-  const mockProducts = [
-    {
-      id: 1,
-      name: 'Saphir Bleu Royal',
-      image: '/public/logooo.jpeg',
-      price: 299.99,
-      category: 'Pierres Précieuses'
-    },
-    {
-      id: 2,
-      name: 'Rubis Rouge Intense',
-      image: '/public/logooo.jpeg',
-      price: 399.99,
-      category: 'Pierres Précieuses'
-    },
-    {
-      id: 3,
-      name: 'Émeraude Verte',
-      image: '/public/logooo.jpeg',
-      price: 499.99,
-      category: 'Pierres Précieuses'
-    }
-  ];
-
-  useEffect(() => {
-    if (searchTerm.length >= 2) {
-      setLoading(true);
-      // Simuler un appel API
-      const timer = setTimeout(() => {
-        const filtered = mockProducts.filter(product =>
-          product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          product.category.toLowerCase().includes(searchTerm.toLowerCase())
-        );
-        setSuggestions(filtered);
-        setLoading(false);
-      }, 300);
-
-      return () => clearTimeout(timer);
-    } else {
+  const handleSearch = async (value) => {
+    if (!value.trim()) {
       setSuggestions([]);
+      return;
     }
-  }, [searchTerm]);
 
-  const handleSearchChange = (event) => {
-    const { value } = event.target;
-    setSearchTerm(value);
-    setAnchorEl(event.currentTarget);
+    setLoading(true);
+    try {
+      const response = await productsAPI.getAll();
+      const products = response.data;
+      const filtered = products.filter(product =>
+        product.name.toLowerCase().includes(value.toLowerCase()) ||
+        product.description.toLowerCase().includes(value.toLowerCase())
+      );
+      setSuggestions(filtered);
+    } catch (error) {
+      console.error('Erreur lors de la recherche:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleSuggestionClick = (productId) => {
-    navigate(`/product/${productId}`);
-    setSearchTerm('');
-    setSuggestions([]);
-    setAnchorEl(null);
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    if (query.trim()) {
+      navigate(`/search?q=${encodeURIComponent(query)}`);
+    }
   };
-
-  const handleClickAway = () => {
-    setSuggestions([]);
-    setAnchorEl(null);
-  };
-
-  const open = Boolean(anchorEl) && suggestions.length > 0;
 
   return (
-    <ClickAwayListener onClickAway={handleClickAway}>
-      <Box className="relative w-full max-w-md">
-        <TextField
-          fullWidth
-          placeholder="Rechercher des pierres précieuses..."
-          value={searchTerm}
-          onChange={handleSearchChange}
-          variant="outlined"
-          className="bg-white rounded-lg"
-          InputProps={{
-            endAdornment: (
-              <InputAdornment position="end">
-                <IconButton>
-                  🔍
-                </IconButton>
-              </InputAdornment>
-            ),
-          }}
-        />
-
-        <Popper
-          open={open}
-          anchorEl={anchorEl}
-          placement="bottom-start"
-          className="z-50 w-full max-w-md"
-        >
-          <Paper className="mt-1 shadow-lg">
-            <List>
-              {loading ? (
-                <ListItem>
-                  <ListItemText primary="Recherche en cours..." />
-                </ListItem>
-              ) : suggestions.length > 0 ? (
-                suggestions.map((product) => (
-                  <ListItem
-                    key={product.id}
-                    button
-                    onClick={() => handleSuggestionClick(product.id)}
-                    className="hover:bg-gray-100"
-                  >
-                    <ListItemAvatar>
-                      <Avatar
-                        src={product.image}
-                        alt={product.name}
-                        variant="rounded"
-                      />
-                    </ListItemAvatar>
-                    <ListItemText
-                      primary={product.name}
-                      secondary={
-                        <Typography
-                          component="span"
-                          variant="body2"
-                          color="text.primary"
-                        >
-                          {product.price.toLocaleString('fr-FR', {
-                            style: 'currency',
-                            currency: 'EUR'
-                          })}
-                        </Typography>
-                      }
-                    />
-                  </ListItem>
-                ))
-              ) : searchTerm.length >= 2 ? (
-                <ListItem>
-                  <ListItemText primary="Aucun résultat trouvé" />
-                </ListItem>
-              ) : null}
-            </List>
-          </Paper>
-        </Popper>
-      </Box>
-    </ClickAwayListener>
+    <Paper component="form" onSubmit={handleSubmit} className="search-container">
+      <Autocomplete
+        freeSolo
+        options={suggestions}
+        getOptionLabel={(option) => 
+          typeof option === 'string' ? option : option.name
+        }
+        filterOptions={(x) => x}
+        onInputChange={(event, value) => {
+          setQuery(value);
+          handleSearch(value);
+        }}
+        renderInput={(params) => (
+          <TextField
+            {...params}
+            placeholder="Rechercher un produit..."
+            variant="outlined"
+            fullWidth
+            InputProps={{
+              ...params.InputProps,
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton type="submit">
+                    <SearchIcon />
+                  </IconButton>
+                </InputAdornment>
+              )
+            }}
+          />
+        )}
+        renderOption={(props, option) => (
+          <li {...props}>
+            <div className="flex items-center p-2">
+              {option.imageUrl && (
+                <img
+                  src={option.imageUrl}
+                  alt={option.name}
+                  className="w-12 h-12 object-cover rounded mr-4"
+                />
+              )}
+              <div>
+                <div className="font-medium">{option.name}</div>
+                <div className="text-sm text-gray-600">
+                  {option.price?.toLocaleString('fr-FR', {
+                    style: 'currency',
+                    currency: 'EUR'
+                  })}
+                </div>
+              </div>
+            </div>
+          </li>
+        )}
+      />
+    </Paper>
   );
 };
 

@@ -1,9 +1,16 @@
 import React from 'react';
 import { Card, CardContent, CardMedia, Typography, Button, Rating, Box } from '@mui/material';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
+import { useDispatch } from 'react-redux';
+import { addToCart } from '../../store/slices/cartSlice';
 
 const ProductCard = ({ product }) => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
+
+  const handleAddToCart = () => {
+    dispatch(addToCart(product));
+  };
 
   return (
     <Card className="h-full hover:shadow-lg transition-shadow">
@@ -40,6 +47,13 @@ const ProductCard = ({ product }) => {
             onClick={() => navigate(`/product/${product.id}`)}
           >
             Voir détails
+          </Button>
+          <Button 
+            variant="contained" 
+            color="secondary"
+            onClick={handleAddToCart}
+          >
+            Ajouter au panier
           </Button>
         </Box>
       </CardContent>
