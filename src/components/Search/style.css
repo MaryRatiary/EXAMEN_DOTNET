@@ -1,0 +1,3 @@
+.SearchBox input::placeholder ,.SearchBox input::-moz-placeholder ,  .SearchBox input::-webkit-input-placeholder {
+  color: rgb(109, 109, 109) !important;
+}

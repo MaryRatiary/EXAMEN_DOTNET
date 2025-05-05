@@ -1,0 +1,37 @@
+@import "tailwindcss";
+
+body{
+  font-family: "Winky Sans", sans-serif;
+  font-optical-sizing: auto;
+  font-weight: 400;
+  font-style:normal;
+  background: #f5f0f0;
+
+
+} 
+header .top-strip{
+  border-top: 1px solid rgba(0,0,0,0.1);
+  border-bottom: 1px solid  rgba(0,0,0,0.1);
+
+}
+
+.container{  
+  width: 100%;
+  margin: auto;
+} 
+.bg-org{
+  background: #ff5252;
+}
+.link:hover{
+  color: #0463cf !important;
+}
+/* nav button{
+  text-transform: captalize !important;
+  color: rgba(0,0,0,0.7) !important;
+  font: bold 1px; 
+}
+nav button:hover{
+  text-transform: captalize !important;
+  color: #ff5252 !important;
+  
+} */
