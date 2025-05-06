@@ -31,17 +31,55 @@ public class AuthService
         {
             Token = token,
             Username = user.Username,
-            IsAdmin = user.IsAdmin
+            Email = user.Email,
+            FirstName = user.FirstName,
+            LastName = user.LastName,
+            Address = user.Address,
+            PhoneNumber = user.PhoneNumber,
+            IsAdmin = user.IsAdmin,
+            CreatedAt = user.CreatedAt
         };
     }
 
     public async Task<(AuthResponseDto? Response, string? Error)> Register(RegisterDto registerDto)
     {
-        // Vérifier si l'email existe déjà
+        // Validation des champs requis
+        if (string.IsNullOrWhiteSpace(registerDto.Username))
+            return (null, "Le nom d'utilisateur est requis");
+            
+        if (string.IsNullOrWhiteSpace(registerDto.Email))
+            return (null, "L'email est requis");
+            
+        if (string.IsNullOrWhiteSpace(registerDto.Password))
+            return (null, "Le mot de passe est requis");
+            
+        if (string.IsNullOrWhiteSpace(registerDto.FirstName))
+            return (null, "Le prénom est requis");
+            
+        if (string.IsNullOrWhiteSpace(registerDto.LastName))
+            return (null, "Le nom est requis");
+            
+        if (string.IsNullOrWhiteSpace(registerDto.Address))
+            return (null, "L'adresse est requise");
+            
+        if (string.IsNullOrWhiteSpace(registerDto.PhoneNumber))
+            return (null, "Le numéro de téléphone est requis");
+
+        // Vérification du format de l'email
+        if (!System.Text.RegularExpressions.Regex.IsMatch(registerDto.Email, 
+            @"^[^@\s]+@[^@\s]+\.[^@\s]+$"))
+            return (null, "Format d'email invalide");
+
+        // Vérification du format du numéro de téléphone (exemple pour format français)
+        if (!System.Text.RegularExpressions.Regex.IsMatch(registerDto.PhoneNumber, 
+            @"^(\+33|0)[1-9](\d{8}|\s\d{2}\s\d{2}\s\d{2}\s\d{2})$"))
+            return (null, "Format de numéro de téléphone invalide");
+
+        // Vérification si l'email existe déjà
         if (await _context.Users.AnyAsync(u => u.Email == registerDto.Email))
             return (null, "Cet email est déjà utilisé");
 
-        // Vérifier si le nom d'utilisateur existe déjà
+        // Vérification si le nom d'utilisateur existe déjà
         if (await _context.Users.AnyAsync(u => u.Username == registerDto.Username))
             return (null, "Ce nom d'utilisateur est déjà utilisé");
 
@@ -55,6 +93,8 @@ public class AuthService
             PasswordHash = HashPassword(registerDto.Password),
             FirstName = registerDto.FirstName,
             LastName = registerDto.LastName,
+            Address = registerDto.Address,
+            PhoneNumber = registerDto.PhoneNumber,
             IsAdmin = isAdmin,
             CreatedAt = DateTime.UtcNow
         };
@@ -67,7 +107,13 @@ public class AuthService
         {
             Token = token,
             Username = user.Username,
-            IsAdmin = user.IsAdmin
+            Email = user.Email,
+            FirstName = user.FirstName,
+            LastName = user.LastName,
+            Address = user.Address,
+            PhoneNumber = user.PhoneNumber,
+            IsAdmin = user.IsAdmin,
+            CreatedAt = user.CreatedAt
         }, null);
     }
 

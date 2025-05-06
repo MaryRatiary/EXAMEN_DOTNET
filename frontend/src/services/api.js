@@ -26,6 +26,8 @@ api.interceptors.request.use(
 export const authAPI = {
   login: (credentials) => api.post('/auth/login', credentials),
   register: (userData) => api.post('/auth/register', userData),
+  updateProfile: (userData) => api.put('/auth/profile', userData),
+  getProfile: () => api.get('/auth/profile')
 };
 
 export const categoriesAPI = {

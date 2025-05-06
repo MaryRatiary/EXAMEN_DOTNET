@@ -1,5 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
+import { useEffect } from 'react';
+import { getProfile } from './store/slices/authSlice';
 import Navigation from './components/header/Navigation';
 import Footer from './components/Footer';
 import Home from './Pages/Home';
@@ -33,6 +35,16 @@ const AdminRoute = ({ children }) => {
 };
 
 function App() {
+  const dispatch = useDispatch();
+
+  useEffect(() => {
+    // Vérifier le token et charger le profil utilisateur au démarrage
+    const token = localStorage.getItem('token');
+    if (token) {
+      dispatch(getProfile());
+    }
+  }, [dispatch]);
+
   return (
     <div className="min-h-screen flex flex-col">
       <Navigation />

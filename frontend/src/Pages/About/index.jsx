@@ -56,7 +56,7 @@ const About = () => {
   ];
 
   return (
-    <Container maxWidth="lg" className="py-8">
+    <Container maxWidth="lg" className="py-8 mt-9">
       {/* Section Histoire */}
       <Box className="text-center mb-16">
         <Typography variant="h3" className="mb-6">

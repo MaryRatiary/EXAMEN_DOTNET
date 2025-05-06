@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Button, IconButton, InputBase, Badge, Avatar } from '@mui/material';
 import { Link, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
-import { GoRocket } from "react-icons/go";
 import { FiMenu, FiX, FiSearch, FiShoppingCart, FiUser } from "react-icons/fi";
 import { logout } from '../../../store/slices/authSlice';
 import "./style.css";
@@ -53,8 +52,8 @@ const Navigation = () => {
   return (
     <header className={`${isScrolled ? 'scrolled' : ''}`}>
       <nav>
-        {/* Top bar with logo and search */}
         <div className="container mx-auto px-4">
+          {/* Top bar with logo and search */}
           <div className="flex items-center justify-between h-[70px]">
             {/* Logo and hamburger menu */}
             <div className="flex items-center gap-4">
@@ -67,7 +66,7 @@ const Navigation = () => {
               </IconButton>
               
               <Link to="/" className="logo-container">
-                <img src="/logooo.jpeg" alt="Logo" className="h-12 w-auto object-contain" />
+                <img src="/logo.png" alt="Logo" className="h-12 w-auto object-contain rounded-xl" />
               </Link>
             </div>
 
@@ -185,47 +184,89 @@ const Navigation = () => {
           </div>
         </div>
 
-        {/* Menu mobile et navigation principale */}
-        <div 
-          className={`lg:block ${isOpen ? 'block' : 'hidden'} bg-white lg:relative fixed inset-0 top-0 z-50 overflow-y-auto`}
-          style={{ height: isOpen ? 'calc(100vh - 64px)' : 'auto' }}
-        >
+        {/* Navigation menu */}
+        <div className="nav-menu-container">
           <div className="container mx-auto px-4">
-            <ul className="lg:flex lg:items-center lg:justify-center lg:gap-5 flex flex-col lg:flex-row py-4 lg:py-2">
+            <ul className="nav-menu">
               <li className="nav-item">
-                <Link to="/" className="nav-link" onClick={() => setIsOpen(false)}>Accueil</Link>
+                <Link to="/" className="nav-link">Accueil</Link>
               </li>
-              <li className="nav-item">
-                <div className="nav-link">
+              <li className="nav-item has-submenu">
+                <span className="nav-link">
                   Pierres Précieuses
-                  <div className="submenu z-100">
-                    <Link to="/products/saphirs" className="submenu-link" onClick={() => setIsOpen(false)}>Saphirs</Link>
-                    <Link to="/products/rubis" className="submenu-link" onClick={() => setIsOpen(false)}>Rubis</Link>
-                    <Link to="/products/emeraudes" className="submenu-link" onClick={() => setIsOpen(false)}>Émeraudes</Link>
-                    <Link to="/products/tourmalines" className="submenu-link" onClick={() => setIsOpen(false)}>Tourmalines</Link>
-                  </div>
+                </span>
+                <div className="submenu">
+                  <Link to="/products/saphirs" className="submenu-link">Saphirs</Link>
+                  <Link to="/products/rubis" className="submenu-link">Rubis</Link>
+                  <Link to="/products/emeraudes" className="submenu-link">Émeraudes</Link>
+                  <Link to="/products/tourmalines" className="submenu-link">Tourmalines</Link>
                 </div>
               </li>
-              <li className="nav-item">
-                <div className="nav-link">
+              <li className="nav-item has-submenu">
+                <span className="nav-link">
                   Bijouterie
-                  <div className="submenu">
-                    <Link to="/jewelry/bagues" className="submenu-link" onClick={() => setIsOpen(false)}>Bagues</Link>
-                    <Link to="/jewelry/colliers" className="submenu-link" onClick={() => setIsOpen(false)}>Colliers</Link>
-                    <Link to="/jewelry/bracelets" className="submenu-link" onClick={() => setIsOpen(false)}>Bracelets</Link>
-                    <Link to="/jewelry/boucles" className="submenu-link" onClick={() => setIsOpen(false)}>Boucles d'oreilles</Link>
-                  </div>
+                </span>
+                <div className="submenu">
+                  <Link to="/jewelry/bagues" className="submenu-link">Bagues</Link>
+                  <Link to="/jewelry/colliers" className="submenu-link">Colliers</Link>
+                  <Link to="/jewelry/bracelets" className="submenu-link">Bracelets</Link>
+                  <Link to="/jewelry/boucles" className="submenu-link">Boucles d'oreilles</Link>
                 </div>
               </li>
               <li className="nav-item">
-                <Link to="/about" className="nav-link" onClick={() => setIsOpen(false)}>À Propos</Link>
+                <Link to="/about" className="nav-link">À Propos</Link>
               </li>
               <li className="nav-item">
-                <Link to="/contact" className="nav-link" onClick={() => setIsOpen(false)}>Contact</Link>
+                <Link to="/contact" className="nav-link">Contact</Link>
               </li>
             </ul>
           </div>
         </div>
+
+        {/* Mobile menu */}
+        {isOpen && (
+          <>
+            <div className="mobile-menu-backdrop" onClick={() => setIsOpen(false)} />
+            <div className="mobile-menu">
+              {/* Mobile menu content */}
+              <div className="container mx-auto px-4">
+                <ul className="nav-menu flex flex-col gap-4">
+                  <li className="nav-item">
+                    <Link to="/" className="nav-link" onClick={() => setIsOpen(false)}>Accueil</Link>
+                  </li>
+                  <li className="nav-item has-submenu">
+                    <span className="nav-link">
+                      Pierres Précieuses
+                    </span>
+                    <div className="submenu">
+                      <Link to="/products/saphirs" className="submenu-link" onClick={() => setIsOpen(false)}>Saphirs</Link>
+                      <Link to="/products/rubis" className="submenu-link" onClick={() => setIsOpen(false)}>Rubis</Link>
+                      <Link to="/products/emeraudes" className="submenu-link" onClick={() => setIsOpen(false)}>Émeraudes</Link>
+                      <Link to="/products/tourmalines" className="submenu-link" onClick={() => setIsOpen(false)}>Tourmalines</Link>
+                    </div>
+                  </li>
+                  <li className="nav-item has-submenu">
+                    <span className="nav-link">
+                      Bijouterie
+                    </span>
+                    <div className="submenu">
+                      <Link to="/jewelry/bagues" className="submenu-link" onClick={() => setIsOpen(false)}>Bagues</Link>
+                      <Link to="/jewelry/colliers" className="submenu-link" onClick={() => setIsOpen(false)}>Colliers</Link>
+                      <Link to="/jewelry/bracelets" className="submenu-link" onClick={() => setIsOpen(false)}>Bracelets</Link>
+                      <Link to="/jewelry/boucles" className="submenu-link" onClick={() => setIsOpen(false)}>Boucles d'oreilles</Link>
+                    </div>
+                  </li>
+                  <li className="nav-item">
+                    <Link to="/about" className="nav-link" onClick={() => setIsOpen(false)}>À Propos</Link>
+                  </li>
+                  <li className="nav-item">
+                    <Link to="/contact" className="nav-link" onClick={() => setIsOpen(false)}>Contact</Link>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </>
+        )}
       </nav>
     </header>
   );

@@ -46,10 +46,10 @@ const Home = () => {
         <Container maxWidth="xl">
           <Grid container spacing={4} alignItems="center">
             <Grid item xs={12} md={6}>
-              <Typography variant="h2" className="text-4xl font-bold mb-4">
+              <Typography variant="h2" className="text-4xl font-bold mb-6">
                 Découvrez les Trésors de Madagascar
               </Typography>
-              <Typography variant="body1" className="text-lg mb-6">
+              <Typography variant="body1" className="text-lg mb-8">
                 Des pierres précieuses et des bijoux artisanaux authentiques directement de Madagascar
               </Typography>
               <Button variant="contained" color="primary" size="large">

@@ -69,7 +69,7 @@ const AdminCategories = () => {
   };
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+    <Container maxWidth="lg" sx={{ mt: 8, mb: 4 }}>
       <div className="flex justify-between items-center mb-4">
         <Typography variant="h4" component="h1">
           Gestion des Catégories

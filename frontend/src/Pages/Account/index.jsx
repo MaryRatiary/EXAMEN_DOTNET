@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
+import { updateProfile, getProfile } from '../../store/slices/authSlice';
 import {
   Container,
   Grid,
@@ -6,10 +8,9 @@ import {
   Box,
   Card,
   CardContent,
-  TextField,
-  Button,
-  Tabs,
-  Tab,
+  IconButton,
+  Divider,
+  Alert,
   Table,
   TableBody,
   TableCell,
@@ -18,194 +19,207 @@ import {
   TableRow,
   Paper,
   Chip,
+  Tabs,
+  Tab,
+  TextField
 } from '@mui/material';
+import EditIcon from '@mui/icons-material/Edit';
+import SaveIcon from '@mui/icons-material/Save';
+import CancelIcon from '@mui/icons-material/Cancel';
 
 const Account = () => {
   const [activeTab, setActiveTab] = useState(0);
+  const [isEditing, setIsEditing] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const dispatch = useDispatch();
+  const { user } = useSelector((state) => state.auth);
   const [userInfo, setUserInfo] = useState({
-    firstName: 'Jean',
-    lastName: 'Dupont',
-    email: 'jean.dupont@example.com',
-    phone: '+33 6 12 34 56 78',
-    address: '123 rue des Lilas',
-    city: 'Paris',
-    postalCode: '75001',
-    country: 'France'
+    firstName: '',
+    lastName: '',
+    email: '',
+    phoneNumber: '',
+    address: '',
+    username: '',
+    createdAt: ''
   });
+  const [editedInfo, setEditedInfo] = useState({...userInfo});
 
-  // Exemple de commandes (à remplacer par les vraies données)
-  const orders = [
-    {
-      id: 'CMD001',
-      date: '2025-05-01',
-      total: 299.99,
-      status: 'Livré',
-      items: [
-        { name: 'Saphir Bleu', quantity: 1, price: 299.99 }
-      ]
-    },
-    {
-      id: 'CMD002',
-      date: '2025-05-03',
-      total: 799.98,
-      status: 'En cours',
-      items: [
-        { name: 'Rubis Rouge', quantity: 2, price: 399.99 }
-      ]
+  useEffect(() => {
+    dispatch(getProfile());
+  }, [dispatch]);
+
+  useEffect(() => {
+    if (user) {
+      const info = {
+        firstName: user.firstName || '',
+        lastName: user.lastName || '',
+        email: user.email || '',
+        phoneNumber: user.phoneNumber || '',
+        address: user.address || '',
+        username: user.username || '',
+        createdAt: user.createdAt || new Date().toISOString()
+      };
+      setUserInfo(info);
+      setEditedInfo(info);
     }
-  ];
+  }, [user]);
 
   const handleTabChange = (event, newValue) => {
     setActiveTab(newValue);
   };
 
-  const handleUpdateProfile = (e) => {
-    e.preventDefault();
-    // Implémenter la mise à jour du profil
-    console.log('Profile update:', userInfo);
+  const handleEdit = () => {
+    setIsEditing(true);
   };
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'Livré':
-        return 'success';
-      case 'En cours':
-        return 'primary';
-      case 'Annulé':
-        return 'error';
-      default:
-        return 'default';
+  const handleCancel = () => {
+    setIsEditing(false);
+    setEditedInfo({...userInfo});
+  };
+
+  const handleUpdateProfile = async (e) => {
+    e.preventDefault();
+    try {
+      await dispatch(updateProfile(editedInfo)).unwrap();
+      setUserInfo({...editedInfo});
+      setIsEditing(false);
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 3000);
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour du profil:', error);
     }
   };
 
+  const renderProfileField = (label, value, field) => (
+    <Grid item xs={12} sm={6}>
+      {isEditing ? (
+        <TextField
+          fullWidth
+          label={label}
+          value={editedInfo[field] || ''}
+          onChange={(e) => setEditedInfo({ ...editedInfo, [field]: e.target.value })}
+          disabled={field === 'email' || field === 'username' || field === 'createdAt' || field === 'accountType'}
+          margin="normal"
+          multiline={field === 'address'}
+          rows={field === 'address' ? 2 : 1}
+          required={field === 'firstName' || field === 'lastName'}
+          helperText={
+            (field === 'phoneNumber' && !editedInfo[field]) ? 'Recommandé pour la livraison' :
+            (field === 'address' && !editedInfo[field]) ? 'Nécessaire pour la livraison' : ''
+          }
+        />
+      ) : (
+        <Box sx={{ mb: 3, backgroundColor: 'background.paper', p: 2, borderRadius: 1 }}>
+          <Typography variant="subtitle2" color="textSecondary" gutterBottom>
+            {label}
+          </Typography>
+          <Typography 
+            variant="body1"
+            sx={{
+              color: value ? 'text.primary' : 'text.secondary',
+              fontStyle: value ? 'normal' : 'italic'
+            }}
+          >
+            {field === 'createdAt' 
+              ? new Date(value).toLocaleDateString('fr-FR', {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric'
+                })
+              : value || 'À compléter'}
+          </Typography>
+        </Box>
+      )}
+    </Grid>
+  );
+
   const renderProfile = () => (
-    <form onSubmit={handleUpdateProfile}>
+    <Box>
+      {success && (
+        <Alert severity="success" sx={{ mb: 3 }}>
+          Profil mis à jour avec succès !
+        </Alert>
+      )}
+      
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Box>
+          <Typography variant="h6">Informations personnelles</Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+            Gérez vos informations personnelles et de livraison
+          </Typography>
+        </Box>
+        {!isEditing ? (
+          <IconButton 
+            color="primary" 
+            onClick={handleEdit} 
+            title="Modifier"
+            sx={{ 
+              backgroundColor: 'action.hover',
+              '&:hover': { backgroundColor: 'action.selected' } 
+            }}
+          >
+            <EditIcon />
+          </IconButton>
+        ) : (
+          <Box>
+            <IconButton 
+              color="primary" 
+              onClick={handleUpdateProfile} 
+              title="Enregistrer"
+              sx={{ mr: 1 }}
+            >
+              <SaveIcon />
+            </IconButton>
+            <IconButton 
+              color="error" 
+              onClick={handleCancel} 
+              title="Annuler"
+            >
+              <CancelIcon />
+            </IconButton>
+          </Box>
+        )}
+      </Box>
+
+      <Divider sx={{ mb: 3 }} />
+
       <Grid container spacing={3}>
-        <Grid item xs={12} sm={6}>
-          <TextField
-            fullWidth
-            label="Prénom"
-            value={userInfo.firstName}
-            onChange={(e) => setUserInfo({ ...userInfo, firstName: e.target.value })}
-          />
+        <Grid item xs={12} md={6}>
+          <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'medium' }}>
+            Identité
+          </Typography>
+          {renderProfileField('Nom d\'utilisateur', userInfo.username, 'username')}
+          {renderProfileField('Email', userInfo.email, 'email')}
+          {renderProfileField('Prénom', userInfo.firstName, 'firstName')}
+          {renderProfileField('Nom', userInfo.lastName, 'lastName')}
         </Grid>
-        <Grid item xs={12} sm={6}>
-          <TextField
-            fullWidth
-            label="Nom"
-            value={userInfo.lastName}
-            onChange={(e) => setUserInfo({ ...userInfo, lastName: e.target.value })}
-          />
-        </Grid>
-        <Grid item xs={12} sm={6}>
-          <TextField
-            fullWidth
-            type="email"
-            label="Email"
-            value={userInfo.email}
-            onChange={(e) => setUserInfo({ ...userInfo, email: e.target.value })}
-          />
-        </Grid>
-        <Grid item xs={12} sm={6}>
-          <TextField
-            fullWidth
-            label="Téléphone"
-            value={userInfo.phone}
-            onChange={(e) => setUserInfo({ ...userInfo, phone: e.target.value })}
-          />
-        </Grid>
-        <Grid item xs={12}>
-          <TextField
-            fullWidth
-            label="Adresse"
-            value={userInfo.address}
-            onChange={(e) => setUserInfo({ ...userInfo, address: e.target.value })}
-          />
-        </Grid>
-        <Grid item xs={12} sm={6}>
-          <TextField
-            fullWidth
-            label="Ville"
-            value={userInfo.city}
-            onChange={(e) => setUserInfo({ ...userInfo, city: e.target.value })}
-          />
-        </Grid>
-        <Grid item xs={12} sm={6}>
-          <TextField
-            fullWidth
-            label="Code Postal"
-            value={userInfo.postalCode}
-            onChange={(e) => setUserInfo({ ...userInfo, postalCode: e.target.value })}
-          />
-        </Grid>
-        <Grid item xs={12}>
-          <TextField
-            fullWidth
-            label="Pays"
-            value={userInfo.country}
-            onChange={(e) => setUserInfo({ ...userInfo, country: e.target.value })}
-          />
-        </Grid>
-        <Grid item xs={12}>
-          <Button type="submit" variant="contained" color="primary">
-            Mettre à jour le profil
-          </Button>
+        <Grid item xs={12} md={6}>
+          <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'medium' }}>
+            Informations de livraison
+          </Typography>
+          {renderProfileField('Adresse', userInfo.address, 'address')}
+          {renderProfileField('Téléphone', userInfo.phoneNumber, 'phoneNumber')}
+          <Box sx={{ mt: 2 }}>
+            <Typography variant="caption" color="text.secondary">
+              Membre depuis le {new Date(userInfo.createdAt).toLocaleDateString('fr-FR', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+              })}
+            </Typography>
+          </Box>
         </Grid>
       </Grid>
-    </form>
+    </Box>
   );
 
   const renderOrders = () => (
-    <TableContainer component={Paper}>
-      <Table>
-        <TableHead>
-          <TableRow>
-            <TableCell>Commande</TableCell>
-            <TableCell>Date</TableCell>
-            <TableCell>Total</TableCell>
-            <TableCell>Statut</TableCell>
-            <TableCell>Détails</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {orders.map((order) => (
-            <TableRow key={order.id}>
-              <TableCell>{order.id}</TableCell>
-              <TableCell>
-                {new Date(order.date).toLocaleDateString('fr-FR')}
-              </TableCell>
-              <TableCell>
-                {order.total.toLocaleString('fr-FR', {
-                  style: 'currency',
-                  currency: 'EUR'
-                })}
-              </TableCell>
-              <TableCell>
-                <Chip
-                  label={order.status}
-                  color={getStatusColor(order.status)}
-                  size="small"
-                />
-              </TableCell>
-              <TableCell>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  onClick={() => console.log('View order:', order.id)}
-                >
-                  Voir
-                </Button>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </TableContainer>
+    <Typography>Historique des commandes</Typography>
   );
 
   return (
-    <Container maxWidth="lg" className="py-8">
-      <Typography variant="h4" className="mb-6">
+    <Container maxWidth="lg" sx={{ py: 4 }}>
+      <Typography variant="h4" sx={{ mb: 4 }}>
         Mon Compte
       </Typography>
 
@@ -213,16 +227,12 @@ const Account = () => {
         <Grid item xs={12}>
           <Card>
             <CardContent>
-              <Tabs
-                value={activeTab}
-                onChange={handleTabChange}
-                className="mb-4"
-              >
+              <Tabs value={activeTab} onChange={handleTabChange} sx={{ mb: 4 }}>
                 <Tab label="Profil" />
                 <Tab label="Commandes" />
               </Tabs>
 
-              <Box className="mt-4">
+              <Box>
                 {activeTab === 0 ? renderProfile() : renderOrders()}
               </Box>
             </CardContent>
