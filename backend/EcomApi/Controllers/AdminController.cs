@@ -4,161 +4,356 @@ using Microsoft.EntityFrameworkCore;
 using EcomApi.Data;
 using EcomApi.Models;
 using EcomApi.DTOs;
+using System.Linq;
 
-namespace EcomApi.Controllers;
-
-[Authorize]
-[ApiController]
-[Route("api/[controller]")]
-public class AdminController : ControllerBase
+namespace EcomApi.Controllers
 {
-    private readonly ApplicationDbContext _context;
-
-    public AdminController(ApplicationDbContext context)
+    [ApiController]
+    [Route("api/admin")]
+    [Authorize(Roles = "Admin")]
+    public class AdminController : ControllerBase
     {
-        _context = context;
-    }
+        private readonly ApplicationDbContext _context;
+        private readonly IWebHostEnvironment _environment;
 
-    [HttpGet("dashboard")]
-    public async Task<ActionResult<DashboardStats>> GetDashboardStats()
-    {
-        var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == User.Identity!.Name);
-        if (user == null || !user.IsAdmin)
-            return Forbid();
-
-        var stats = new DashboardStats
+        public AdminController(ApplicationDbContext context, IWebHostEnvironment environment)
         {
-            TotalUsers = await _context.Users.CountAsync(),
-            TotalOrders = await _context.Orders.CountAsync(),
-            TotalProducts = await _context.Products.CountAsync(),
-            RecentOrders = await _context.Orders
-                .Include(o => o.User)
-                .OrderByDescending(o => o.OrderDate)
-                .Take(10)
-                .Select(o => new OrderSummaryDto
-                {
-                    Id = o.Id,
-                    Username = o.User.Username,
-                    TotalAmount = o.TotalAmount,
-                    OrderDate = o.OrderDate,
-                    Status = o.Status
-                })
-                .ToListAsync(),
-            TopSellingProducts = await _context.OrderItems
-                .GroupBy(oi => oi.ProductId)
-                .Select(g => new
-                {
-                    ProductId = g.Key,
-                    TotalSold = g.Count()
-                })
-                .OrderByDescending(x => x.TotalSold)
-                .Take(5)
-                .Join(
-                    _context.Products,
-                    g => g.ProductId,
-                    p => p.Id,
-                    (g, p) => new ProductStatsDto
-                    {
-                        Id = p.Id,
-                        Name = p.Name,
-                        TotalSold = g.TotalSold
-                    }
-                )
-                .ToListAsync()
-        };
+            _context = context;
+            _environment = environment;
+        }
 
-        return Ok(stats);
-    }
+        // GET: api/admin/categories
+        [HttpGet("categories")]
+        public async Task<ActionResult<IEnumerable<CategoryDto>>> GetCategories(bool? topLevelOnly = false)
+        {
+            var query = _context.Categories
+                .Include(c => c.SubCategories)
+                .AsQueryable();
 
-    [HttpGet("categories")]
-    public async Task<ActionResult<IEnumerable<Category>>> GetCategories()
-    {
-        var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == User.Identity!.Name);
-        if (user == null || !user.IsAdmin)
-            return Forbid();
-
-        return await _context.Categories.ToListAsync();
-    }
-
-    [HttpPost("categories")]
-    public async Task<ActionResult<Category>> CreateCategory([FromBody] Category category)
-    {
-        var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == User.Identity!.Name);
-        if (user == null || !user.IsAdmin)
-            return Forbid();
-
-        _context.Categories.Add(category);
-        await _context.SaveChangesAsync();
-
-        return CreatedAtAction(nameof(GetCategories), new { id = category.Id }, category);
-    }
-
-    [HttpDelete("categories/{id}")]
-    public async Task<IActionResult> DeleteCategory(int id)
-    {
-        var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == User.Identity!.Name);
-        if (user == null || !user.IsAdmin)
-            return Forbid();
-
-        var category = await _context.Categories.FindAsync(id);
-        if (category == null)
-            return NotFound();
-
-        _context.Categories.Remove(category);
-        await _context.SaveChangesAsync();
-
-        return NoContent();
-    }
-
-    [HttpPost("products")]
-    public async Task<ActionResult<Product>> CreateProduct([FromBody] Product product)
-    {
-        var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == User.Identity!.Name);
-        if (user == null || !user.IsAdmin)
-            return Forbid();
-
-        _context.Products.Add(product);
-        await _context.SaveChangesAsync();
-
-        return CreatedAtAction("GetProduct", "Products", new { id = product.Id }, product);
-    }
-
-    [HttpDelete("products/{id}")]
-    public async Task<IActionResult> DeleteProduct(int id)
-    {
-        var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == User.Identity!.Name);
-        if (user == null || !user.IsAdmin)
-            return Forbid();
-
-        var product = await _context.Products.FindAsync(id);
-        if (product == null)
-            return NotFound();
-
-        _context.Products.Remove(product);
-        await _context.SaveChangesAsync();
-
-        return NoContent();
-    }
-
-    [HttpGet("users")]
-    public async Task<ActionResult<IEnumerable<UserStatsDto>>> GetUserStats()
-    {
-        var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == User.Identity!.Name);
-        if (user == null || !user.IsAdmin)
-            return Forbid();
-
-        var userStats = await _context.Users
-            .Select(u => new UserStatsDto
+            if (topLevelOnly == true)
             {
-                Id = u.Id,
-                Username = u.Username,
-                Email = u.Email,
-                OrderCount = u.Orders.Count,
-                TotalSpent = u.Orders.Sum(o => o.TotalAmount),
-                LastOrderDate = u.Orders.Max(o => (DateTime?)o.OrderDate)
-            })
-            .ToListAsync();
+                query = query.Where(c => c.ParentCategoryId == null);
+            }
 
-        return Ok(userStats);
+            var categories = await query.ToListAsync();
+            return Ok(MapCategoriesToDtos(categories));
+        }
+
+        // GET: api/admin/categories/{id}
+        [HttpGet("categories/{id}")]
+        public async Task<ActionResult<CategoryDto>> GetCategory(int id)
+        {
+            var category = await _context.Categories
+                .Include(c => c.SubCategories)
+                .FirstOrDefaultAsync(c => c.Id == id);
+
+            if (category == null)
+            {
+                return NotFound();
+            }
+
+            return MapCategoryToDto(category);
+        }
+
+        // POST: api/admin/categories
+        [HttpPost("categories")]
+        public async Task<ActionResult<CategoryDto>> CreateCategory(CategoryCreateDto createDto)
+        {
+            var category = new Category
+            {
+                Name = createDto.Name,
+                Description = createDto.Description,
+                ImageUrl = createDto.ImageUrl,
+                ParentCategoryId = createDto.ParentCategoryId
+            };
+
+            if (createDto.ParentCategoryId.HasValue)
+            {
+                var parentCategory = await _context.Categories.FindAsync(createDto.ParentCategoryId);
+                if (parentCategory == null)
+                {
+                    return BadRequest("Catégorie parente non trouvée");
+                }
+                category.Level = parentCategory.Level + 1;
+                category.Path = parentCategory.Path + "/" + createDto.Name;
+            }
+            else
+            {
+                category.Level = 0;
+                category.Path = createDto.Name;
+            }
+
+            _context.Categories.Add(category);
+            await _context.SaveChangesAsync();
+
+            return CreatedAtAction(nameof(GetCategory), new { id = category.Id }, MapCategoryToDto(category));
+        }
+
+        // PUT: api/admin/categories/{id}
+        [HttpPut("categories/{id}")]
+        public async Task<IActionResult> UpdateCategory(int id, CategoryUpdateDto updateDto)
+        {
+            var category = await _context.Categories.FindAsync(id);
+            if (category == null)
+            {
+                return NotFound();
+            }
+
+            // Vérifier si la nouvelle catégorie parente existe
+            if (updateDto.ParentCategoryId.HasValue)
+            {
+                var newParent = await _context.Categories.FindAsync(updateDto.ParentCategoryId);
+                if (newParent == null)
+                {
+                    return BadRequest("Nouvelle catégorie parente non trouvée");
+                }
+
+                // Éviter les cycles dans la hiérarchie
+                if (await HasCycle(category.Id, updateDto.ParentCategoryId.Value))
+                {
+                    return BadRequest("Cette modification créerait un cycle dans la hiérarchie des catégories");
+                }
+
+                category.ParentCategoryId = updateDto.ParentCategoryId;
+                category.Level = newParent.Level + 1;
+                category.Path = newParent.Path + "/" + updateDto.Name;
+            }
+            else
+            {
+                category.ParentCategoryId = null;
+                category.Level = 0;
+                category.Path = updateDto.Name;
+            }
+
+            category.Name = updateDto.Name;
+            category.Description = updateDto.Description;
+            category.ImageUrl = updateDto.ImageUrl;
+
+            // Mettre à jour récursivement les chemins des sous-catégories
+            await UpdateSubcategoriesPaths(category);
+
+            await _context.SaveChangesAsync();
+            return NoContent();
+        }
+
+        // DELETE: api/admin/categories/{id}
+        [HttpDelete("categories/{id}")]
+        public async Task<IActionResult> DeleteCategory(int id)
+        {
+            var category = await _context.Categories
+                .Include(c => c.Products)
+                .Include(c => c.SubCategories)
+                .FirstOrDefaultAsync(c => c.Id == id);
+
+            if (category == null)
+            {
+                return NotFound();
+            }
+
+            // Supprimer récursivement toutes les sous-catégories
+            await DeleteCategoryRecursive(category);
+
+            await _context.SaveChangesAsync();
+            return NoContent();
+        }
+
+        // Méthodes privées d'aide
+        private async Task DeleteCategoryRecursive(Category category)
+        {
+            foreach (var subcategory in category.SubCategories.ToList())
+            {
+                await DeleteCategoryRecursive(subcategory);
+            }
+            _context.Categories.Remove(category);
+        }
+
+        private async Task<bool> HasCycle(int categoryId, int newParentId)
+        {
+            var current = await _context.Categories.FindAsync(newParentId);
+            while (current != null)
+            {
+                if (current.Id == categoryId)
+                {
+                    return true;
+                }
+                current = current.ParentCategoryId.HasValue ? 
+                    await _context.Categories.FindAsync(current.ParentCategoryId) : null;
+            }
+            return false;
+        }
+
+        private async Task UpdateSubcategoriesPaths(Category category)
+        {
+            var subcategories = await _context.Categories
+                .Where(c => c.ParentCategoryId == category.Id)
+                .ToListAsync();
+
+            foreach (var sub in subcategories)
+            {
+                sub.Path = category.Path + "/" + sub.Name;
+                sub.Level = category.Level + 1;
+                await UpdateSubcategoriesPaths(sub);
+            }
+        }
+
+        private CategoryDto MapCategoryToDto(Category category)
+        {
+            return new CategoryDto
+            {
+                Id = category.Id,
+                Name = category.Name,
+                Description = category.Description,
+                ImageUrl = category.ImageUrl,
+                ParentCategoryId = category.ParentCategoryId,
+                Path = category.Path,
+                Level = category.Level,
+                SubCategories = category.SubCategories
+                    .Select(MapCategoryToDto)
+                    .ToList()
+            };
+        }
+
+        private List<CategoryDto> MapCategoriesToDtos(List<Category> categories)
+        {
+            return categories.Select(MapCategoryToDto).ToList();
+        }
+
+        // Autres méthodes existantes...
+
+        [HttpGet("dashboard")]
+        public async Task<ActionResult<DashboardStats>> GetDashboardStats()
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == User.Identity!.Name);
+            if (user == null || !user.IsAdmin)
+                return Forbid();
+
+            var stats = new DashboardStats
+            {
+                TotalUsers = await _context.Users.CountAsync(),
+                TotalOrders = await _context.Orders.CountAsync(),
+                TotalProducts = await _context.Products.CountAsync(),
+                RecentOrders = await _context.Orders
+                    .Include(o => o.User)
+                    .OrderByDescending(o => o.OrderDate)
+                    .Take(10)
+                    .Select(o => new OrderSummaryDto
+                    {
+                        Id = o.Id,
+                        Username = o.User.Username,
+                        TotalAmount = o.TotalAmount,
+                        OrderDate = o.OrderDate,
+                        Status = o.Status
+                    })
+                    .ToListAsync(),
+                TopSellingProducts = await _context.OrderItems
+                    .GroupBy(oi => oi.ProductId)
+                    .Select(g => new
+                    {
+                        ProductId = g.Key,
+                        TotalSold = g.Count()
+                    })
+                    .OrderByDescending(x => x.TotalSold)
+                    .Take(5)
+                    .Join(
+                        _context.Products,
+                        g => g.ProductId,
+                        p => p.Id,
+                        (g, p) => new ProductStatsDto
+                        {
+                            Id = p.Id,
+                            Name = p.Name,
+                            TotalSold = g.TotalSold
+                        }
+                    )
+                    .ToListAsync()
+            };
+
+            return Ok(stats);
+        }
+
+        [HttpPost("products")]
+        public async Task<ActionResult<Product>> CreateProduct([FromBody] Product product)
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == User.Identity!.Name);
+            if (user == null || !user.IsAdmin)
+                return Forbid();
+
+            _context.Products.Add(product);
+            await _context.SaveChangesAsync();
+
+            return CreatedAtAction("GetProduct", "Products", new { id = product.Id }, product);
+        }
+
+        [HttpDelete("products/{id}")]
+        public async Task<IActionResult> DeleteProduct(int id)
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == User.Identity!.Name);
+            if (user == null || !user.IsAdmin)
+                return Forbid();
+
+            var product = await _context.Products.FindAsync(id);
+            if (product == null)
+                return NotFound();
+
+            _context.Products.Remove(product);
+            await _context.SaveChangesAsync();
+
+            return NoContent();
+        }
+
+        [HttpGet("users")]
+        public async Task<ActionResult<IEnumerable<UserStatsDto>>> GetUserStats()
+        {
+            var userStats = await _context.Users
+                .Select(u => new UserStatsDto
+                {
+                    Id = u.Id,
+                    Username = u.Username,
+                    Email = u.Email,
+                    OrderCount = u.Orders.Count,
+                    TotalSpent = u.Orders.Sum(o => o.TotalAmount),
+                    LastOrderDate = u.Orders.Max(o => (DateTime?)o.OrderDate)
+                })
+                .ToListAsync();
+
+            return Ok(userStats);
+        }
+
+        [HttpPost("upload-image")]
+        public async Task<ActionResult<string>> UploadImage(IFormFile file)
+        {
+            if (file == null || file.Length == 0)
+                return BadRequest("Aucun fichier n'a été envoyé");
+
+            // Vérifier le type de fichier
+            var allowedTypes = new[] { "image/jpeg", "image/png", "image/gif" };
+            if (!allowedTypes.Contains(file.ContentType.ToLower()))
+                return BadRequest("Type de fichier non autorisé. Utilisez JPG, PNG ou GIF.");
+
+            try
+            {
+                // Créer le dossier uploads s'il n'existe pas
+                var uploadsFolder = Path.Combine(_environment.WebRootPath, "uploads");
+                if (!Directory.Exists(uploadsFolder))
+                    Directory.CreateDirectory(uploadsFolder);
+
+                // Générer un nom de fichier unique
+                var uniqueFileName = $"{Guid.NewGuid()}{Path.GetExtension(file.FileName)}";
+                var filePath = Path.Combine(uploadsFolder, uniqueFileName);
+
+                // Sauvegarder le fichier
+                using (var stream = new FileStream(filePath, FileMode.Create))
+                {
+                    await file.CopyToAsync(stream);
+                }
+
+                // Retourner l'URL de l'image
+                return Ok($"/uploads/{uniqueFileName}");
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, "Une erreur est survenue lors du téléchargement du fichier");
+            }
+        }
     }
 }

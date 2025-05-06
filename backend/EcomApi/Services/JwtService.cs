@@ -28,6 +28,12 @@ public class JwtService
             new Claim("isAdmin", user.IsAdmin.ToString())
         };
 
+        // Add role claim for admin users
+        if (user.IsAdmin)
+        {
+            claims.Add(new Claim(ClaimTypes.Role, "Admin"));
+        }
+
         var credentials = new SigningCredentials(
             new SymmetricSecurityKey(secretKey),
             SecurityAlgorithms.HmacSha256

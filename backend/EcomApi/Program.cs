@@ -40,6 +40,13 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
+// Add authorization with role-based policies
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("RequireAdminRole", policy => 
+        policy.RequireRole("Admin"));
+});
+
 // Register Services
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<JwtService>();
