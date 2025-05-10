@@ -199,6 +199,7 @@ const Navigation = () => {
                 >
                   <FiUser />
                 </IconButton>
+                
               )}
             </div>
           </div>
@@ -222,6 +223,7 @@ const Navigation = () => {
               <li className="nav-item">
                 <Link to="/contact" className="nav-link">Contact</Link>
               </li>
+              
             </ul>
           </div>
         </div>

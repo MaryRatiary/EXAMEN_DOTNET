@@ -57,7 +57,7 @@ namespace EcomApi.Controllers
 
         // POST: api/admin/categories
         [HttpPost("categories")]
-        public async Task<ActionResult<CategoryDto>> CreateCategory(CategoryCreateDto createDto)
+        public async Task<ActionResult<CategoryDto>> CreateCategory([FromBody] CreateCategoryDto createDto)
         {
             var category = new Category
             {
@@ -91,7 +91,7 @@ namespace EcomApi.Controllers
 
         // PUT: api/admin/categories/{id}
         [HttpPut("categories/{id}")]
-        public async Task<IActionResult> UpdateCategory(int id, CategoryUpdateDto updateDto)
+        public async Task<IActionResult> UpdateCategory(int id, UpdateCategoryDto updateDto)
         {
             var category = await _context.Categories.FindAsync(id);
             if (category == null)
@@ -99,40 +99,28 @@ namespace EcomApi.Controllers
                 return NotFound();
             }
 
-            // Vérifier si la nouvelle catégorie parente existe
-            if (updateDto.ParentCategoryId.HasValue)
-            {
-                var newParent = await _context.Categories.FindAsync(updateDto.ParentCategoryId);
-                if (newParent == null)
-                {
-                    return BadRequest("Nouvelle catégorie parente non trouvée");
-                }
-
-                // Éviter les cycles dans la hiérarchie
-                if (await HasCycle(category.Id, updateDto.ParentCategoryId.Value))
-                {
-                    return BadRequest("Cette modification créerait un cycle dans la hiérarchie des catégories");
-                }
-
-                category.ParentCategoryId = updateDto.ParentCategoryId;
-                category.Level = newParent.Level + 1;
-                category.Path = newParent.Path + "/" + updateDto.Name;
-            }
-            else
-            {
-                category.ParentCategoryId = null;
-                category.Level = 0;
-                category.Path = updateDto.Name;
-            }
-
             category.Name = updateDto.Name;
             category.Description = updateDto.Description;
             category.ImageUrl = updateDto.ImageUrl;
 
-            // Mettre à jour récursivement les chemins des sous-catégories
-            await UpdateSubcategoriesPaths(category);
+            // Keep existing category hierarchy
+            if (category.ParentCategoryId.HasValue)
+            {
+                var parent = await _context.Categories.FindAsync(category.ParentCategoryId);
+                if (parent != null)
+                {
+                    category.Path = parent.Path + "/" + updateDto.Name;
+                }
+            }
+            else
+            {
+                category.Path = updateDto.Name;
+            }
 
+            // Update paths of subcategories to reflect the name change
+            await UpdateSubcategoriesPaths(category);
             await _context.SaveChangesAsync();
+            
             return NoContent();
         }
 
@@ -282,6 +270,27 @@ namespace EcomApi.Controllers
             await _context.SaveChangesAsync();
 
             return CreatedAtAction("GetProduct", "Products", new { id = product.Id }, product);
+        }
+
+        [HttpGet("products")]
+        public async Task<ActionResult<IEnumerable<ProductDto>>> GetProducts()
+        {
+            var products = await _context.Products
+                .Include(p => p.Category)
+                .Select(p => new ProductDto
+                {
+                    Id = p.Id,
+                    Name = p.Name,
+                    Description = p.Description,
+                    Price = p.Price,
+                    Stock = p.Stock,
+                    ImageUrl = p.ImageUrl,
+                    CategoryId = p.CategoryId,
+                    CategoryName = p.Category.Name
+                })
+                .ToListAsync();
+
+            return Ok(products);
         }
 
         [HttpDelete("products/{id}")]

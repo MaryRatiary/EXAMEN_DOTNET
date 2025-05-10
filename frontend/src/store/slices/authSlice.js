@@ -60,6 +60,10 @@ export const updateProfile = createAsyncThunk(
       const response = await authAPI.updateProfile(userData);
       return response.data;
     } catch (error) {
+      if (error.response?.status === 401) {
+        localStorage.removeItem('token');
+        setAuthHeader(null);
+      }
       return rejectWithValue(
         error.response?.data?.message || 'Erreur lors de la mise à jour du profil'
       );
@@ -87,10 +91,10 @@ export const getProfile = createAsyncThunk(
 
 const initialState = {
   user: null,
-  token: token, // Initialize with token from localStorage
+  token: token,
   isLoading: false,
   error: null,
-  isAuthenticated: !!token // Initialize auth status based on token presence
+  isAuthenticated: !!token
 };
 
 const authSlice = createSlice({
@@ -178,6 +182,11 @@ const authSlice = createSlice({
       .addCase(updateProfile.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload;
+        if (action.error.message?.includes('401')) {
+          state.isAuthenticated = false;
+          state.token = null;
+          state.user = null;
+        }
       })
       // Get Profile
       .addCase(getProfile.pending, (state) => {
@@ -193,8 +202,7 @@ const authSlice = createSlice({
       .addCase(getProfile.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload;
-        // Si le token est invalide ou expiré
-        if (action.payload?.includes('401')) {
+        if (action.error.message?.includes('401')) {
           state.isAuthenticated = false;
           state.token = null;
           state.user = null;

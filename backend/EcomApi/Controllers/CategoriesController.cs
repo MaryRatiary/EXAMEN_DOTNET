@@ -17,55 +17,14 @@ public class CategoriesController : ControllerBase
         _context = context;
     }
 
-    [HttpGet]
-    public async Task<ActionResult<IEnumerable<CategoryDto>>> GetCategories(bool? topLevelOnly = false)
+    private async Task<CategoryDto> MapCategoryWithSubCategories(Category category)
     {
-        var query = _context.Categories
-            .Include(c => c.SubCategories)
-            .AsQueryable();
+        // Charger les sous-catégories si elles existent
+        await _context.Entry(category)
+            .Collection(c => c.SubCategories)
+            .LoadAsync();
 
-        if (topLevelOnly == true)
-        {
-            query = query.Where(c => c.ParentCategoryId == null);
-        }
-
-        var categories = await query.ToListAsync();
-        return Ok(categories.Select(c => new CategoryDto
-        {
-            Id = c.Id,
-            Name = c.Name,
-            Description = c.Description,
-            ImageUrl = c.ImageUrl,
-            ParentCategoryId = c.ParentCategoryId,
-            Path = c.Path,
-            Level = c.Level,
-            SubCategories = c.SubCategories.Select(sc => new CategoryDto
-            {
-                Id = sc.Id,
-                Name = sc.Name,
-                Description = sc.Description,
-                ImageUrl = sc.ImageUrl,
-                ParentCategoryId = sc.ParentCategoryId,
-                Path = sc.Path,
-                Level = sc.Level,
-                SubCategories = new List<CategoryDto>()
-            }).ToList()
-        }).ToList());
-    }
-
-    [HttpGet("{id}")]
-    public async Task<ActionResult<CategoryDto>> GetCategory(int id)
-    {
-        var category = await _context.Categories
-            .Include(c => c.SubCategories)
-            .FirstOrDefaultAsync(c => c.Id == id);
-
-        if (category == null)
-        {
-            return NotFound();
-        }
-
-        return Ok(new CategoryDto
+        var dto = new CategoryDto
         {
             Id = category.Id,
             Name = category.Name,
@@ -74,17 +33,82 @@ public class CategoriesController : ControllerBase
             ParentCategoryId = category.ParentCategoryId,
             Path = category.Path,
             Level = category.Level,
-            SubCategories = category.SubCategories.Select(sc => new CategoryDto
+            ProductCount = category.Products.Count,
+            SubCategories = new List<CategoryDto>()
+        };
+
+        // Récursivement charger toutes les sous-catégories
+        if (category.SubCategories?.Any() == true)
+        {
+            foreach (var subCategory in category.SubCategories)
             {
-                Id = sc.Id,
-                Name = sc.Name,
-                Description = sc.Description,
-                ImageUrl = sc.ImageUrl,
-                ParentCategoryId = sc.ParentCategoryId,
-                Path = sc.Path,
-                Level = sc.Level,
-                SubCategories = new List<CategoryDto>()
-            }).ToList()
-        });
+                dto.SubCategories.Add(await MapCategoryWithSubCategories(subCategory));
+            }
+        }
+
+        return dto;
+    }
+
+    [HttpGet]
+    public async Task<ActionResult<IEnumerable<CategoryDto>>> GetCategories(bool? topLevelOnly = false)
+    {
+        var query = _context.Categories
+            .Include(c => c.Products)
+            .AsQueryable();
+
+        if (topLevelOnly == true)
+        {
+            query = query.Where(c => c.ParentCategoryId == null);
+        }
+
+        var categories = await query.ToListAsync();
+        var dtos = new List<CategoryDto>();
+
+        foreach (var category in categories)
+        {
+            dtos.Add(await MapCategoryWithSubCategories(category));
+        }
+
+        return Ok(dtos);
+    }
+
+    [HttpGet("{id}")]
+    public async Task<ActionResult<CategoryDto>> GetCategory(int id)
+    {
+        var category = await _context.Categories
+            .Include(c => c.Products)
+            .FirstOrDefaultAsync(c => c.Id == id);
+
+        if (category == null)
+        {
+            return NotFound();
+        }
+
+        return Ok(await MapCategoryWithSubCategories(category));
+    }
+
+    [HttpGet("{id}/products")]
+    public async Task<ActionResult<IEnumerable<ProductDto>>> GetCategoryProducts(int id)
+    {
+        var category = await _context.Categories
+            .Include(c => c.Products)
+            .FirstOrDefaultAsync(c => c.Id == id);
+
+        if (category == null)
+        {
+            return NotFound();
+        }
+
+        return Ok(category.Products.Select(p => new ProductDto
+        {
+            Id = p.Id,
+            Name = p.Name,
+            Description = p.Description,
+            Price = p.Price,
+            Stock = p.Stock,
+            ImageUrl = p.ImageUrl,
+            CategoryId = p.CategoryId,
+            CategoryName = category.Name
+        }));
     }
 }

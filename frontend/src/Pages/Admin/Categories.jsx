@@ -1,355 +1,290 @@
 import React, { useState, useEffect } from 'react';
+import { adminAPI } from '../../services/api';
 import {
-  Container,
-  Typography,
   Button,
+  TextField,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
-  TextField,
-  Box,
+  List,
+  ListItemText,
   IconButton,
+  Breadcrumbs,
+  Typography,
+  Box,
   Card,
-  CardMedia,
-  Grid,
+  CardContent,
   Alert,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Chip,
 } from '@mui/material';
-import { Edit as EditIcon, Delete as DeleteIcon, Add as AddIcon } from '@mui/icons-material';
-import { useSelector } from 'react-redux';
-import axios from 'axios';
+import {
+  Add as AddIcon,
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  ArrowBack as ArrowBackIcon,
+  FolderOpen as FolderIcon,
+} from '@mui/icons-material';
 import ImageUpload from '../../components/ImageUpload';
 
-const AdminCategories = () => {
+export default function Categories() {
   const [categories, setCategories] = useState([]);
-  const [open, setOpen] = useState(false);
-  const [editMode, setEditMode] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState(null);
-  const [newCategory, setNewCategory] = useState({ 
-    name: '', 
-    description: '', 
+  const [currentCategory, setCurrentCategory] = useState(null);
+  const [openDialog, setOpenDialog] = useState(false);
+  const [error, setError] = useState('');
+  const [categoryData, setCategoryData] = useState({
+    name: '',
+    description: '',
     imageUrl: '',
-    parentCategoryId: ''
+    parentCategoryId: null,
   });
-  const [alert, setAlert] = useState({ show: false, type: '', message: '' });
-  const { token } = useSelector((state) => state.auth);
-  const [viewMode, setViewMode] = useState('all'); // 'all' ou 'tree'
+  const [categoryPath, setCategoryPath] = useState([]);
+  const [editMode, setEditMode] = useState(false);
 
   useEffect(() => {
     fetchCategories();
   }, []);
 
-  const fetchCategories = async () => {
+  const fetchCategories = async (parentId = null) => {
     try {
-      const response = await axios.get('http://localhost:5050/api/categories');
-      setCategories(response.data);
-    } catch (error) {
-      showAlert('error', 'Erreur lors du chargement des catégories');
-    }
-  };
-
-  const handleEditCategory = (category) => {
-    setSelectedCategory(category);
-    setNewCategory({
-      name: category.name,
-      description: category.description || '',
-      imageUrl: category.imageUrl || '',
-      parentCategoryId: category.parentCategoryId || ''
-    });
-    setEditMode(true);
-    setOpen(true);
-  };
-
-  const handleCreateOrUpdateCategory = async () => {
-    try {
-      if (editMode) {
-        await axios.put(
-          `http://localhost:5050/api/admin/categories/${selectedCategory.id}`,
-          newCategory,
-          {
-            headers: { Authorization: `Bearer ${token}` }
-          }
-        );
-        showAlert('success', 'Catégorie mise à jour avec succès');
+      setError('');
+      let response;
+      if (parentId === null) {
+        response = await adminAPI.getCategories(true);
+        setCategories(Array.isArray(response.data) ? response.data : []);
       } else {
-        await axios.post(
-          'http://localhost:5050/api/admin/categories',
-          newCategory,
-          {
-            headers: { Authorization: `Bearer ${token}` }
-          }
-        );
-        showAlert('success', 'Catégorie créée avec succès');
+        response = await adminAPI.getCategoryById(parentId);
+        setCategories(response.data.subCategories || []);
       }
-      setOpen(false);
-      resetForm();
-      fetchCategories();
     } catch (error) {
-      showAlert('error', 'Erreur lors de l\'enregistrement de la catégorie');
+      console.error('Error fetching categories:', error);
+      setError('Erreur lors du chargement des catégories');
     }
   };
 
-  const handleDeleteCategory = async (id) => {
-    if (window.confirm('Êtes-vous sûr de vouloir supprimer cette catégorie ? Toutes les sous-catégories seront également supprimées.')) {
-      try {
-        await axios.delete(`http://localhost:5050/api/admin/categories/${id}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        showAlert('success', 'Catégorie supprimée avec succès');
-        fetchCategories();
-      } catch (error) {
-        showAlert('error', 'Erreur lors de la suppression de la catégorie');
-      }
+  const handleNavigateToCategory = async (category) => {
+    try {
+      setError('');
+      setCurrentCategory(category);
+      setCategoryPath([...categoryPath, category]);
+      await fetchCategories(category.id);
+    } catch (error) {
+      console.error('Error navigating to category:', error);
+      setError('Erreur lors de la navigation vers la catégorie');
     }
   };
 
-  const resetForm = () => {
-    setNewCategory({ 
-      name: '', 
-      description: '', 
-      imageUrl: '', 
-      parentCategoryId: '' 
+  const handleNavigateBack = async () => {
+    try {
+      setError('');
+      const newPath = [...categoryPath];
+      newPath.pop();
+      setCurrentCategory(newPath[newPath.length - 1] || null);
+      setCategoryPath(newPath);
+      await fetchCategories(newPath[newPath.length - 1]?.id || null);
+    } catch (error) {
+      console.error('Error navigating back:', error);
+      setError('Erreur lors du retour à la catégorie précédente');
+    }
+  };
+
+  const handleOpenDialog = (category = null) => {
+    setError('');
+    if (category) {
+      setCategoryData({
+        id: category.id,
+        name: category.name,
+        description: category.description || '',
+        imageUrl: category.imageUrl || '',
+        parentCategoryId: category.parentCategoryId,
+      });
+      setEditMode(true);
+    } else {
+      setCategoryData({
+        name: '',
+        description: '',
+        imageUrl: '',
+        parentCategoryId: currentCategory?.id || null,
+      });
+      setEditMode(false);
+    }
+    setOpenDialog(true);
+  };
+
+  const handleCloseDialog = () => {
+    setOpenDialog(false);
+    setCategoryData({
+      name: '',
+      description: '',
+      imageUrl: '',
+      parentCategoryId: currentCategory?.id || null,
     });
     setEditMode(false);
-    setSelectedCategory(null);
+    setError('');
   };
 
-  const showAlert = (type, message) => {
-    setAlert({ show: true, type, message });
-    setTimeout(() => setAlert({ show: false, type: '', message: '' }), 3000);
-  };
-
-  const getParentPath = (category) => {
-    if (!category.path) return '';
-    const parts = category.path.split('/');
-    return parts.slice(0, -1).join(' > ');
-  };
-
-  // Organiser les catégories en arbre
-  const buildCategoryTree = (categories) => {
-    const categoryMap = {};
-    const rootCategories = [];
-
-    // Créer un map de toutes les catégories
-    categories.forEach(category => {
-      categoryMap[category.id] = { ...category, children: [] };
-    });
-
-    // Construire l'arbre
-    categories.forEach(category => {
-      if (category.parentCategoryId) {
-        const parent = categoryMap[category.parentCategoryId];
-        if (parent) {
-          parent.children.push(categoryMap[category.id]);
-        }
+  const handleSubmit = async () => {
+    try {
+      setError('');
+      if (editMode) {
+        // Utiliser l'id stocké dans categoryData pour la mise à jour
+        await adminAPI.updateCategory(categoryData.id, {
+          name: categoryData.name,
+          description: categoryData.description,
+          imageUrl: categoryData.imageUrl
+        });
       } else {
-        rootCategories.push(categoryMap[category.id]);
+        await adminAPI.createCategory(categoryData);
       }
-    });
-
-    return rootCategories;
+      handleCloseDialog();
+      await fetchCategories(currentCategory?.id || null);
+    } catch (error) {
+      console.error('Error saving category:', error);
+      setError(error.response?.data?.message || 'Erreur lors de l\'enregistrement de la catégorie');
+    }
   };
 
-  const renderCategoryTree = (category, level = 0) => (
-    <Box key={category.id} sx={{ ml: level * 3 }}>
-      <Card sx={{ mb: 2, display: 'flex', alignItems: 'center' }}>
-        <CardMedia
-          component="img"
-          sx={{ width: 100, height: 100, objectFit: 'cover' }}
-          image={category.imageUrl || '/placeholder.jpg'}
-          alt={category.name}
-        />
-        <Box sx={{ flexGrow: 1, p: 2 }}>
-          <Typography variant="h6">{category.name}</Typography>
-          <Typography variant="body2" color="text.secondary">
-            {category.description || 'Aucune description'}
-          </Typography>
-        </Box>
-        <Box sx={{ p: 2 }}>
-          <IconButton
-            color="primary"
-            onClick={() => handleEditCategory(category)}
-          >
-            <EditIcon />
-          </IconButton>
-          <IconButton
-            color="error"
-            onClick={() => handleDeleteCategory(category.id)}
-          >
-            <DeleteIcon />
-          </IconButton>
-        </Box>
-      </Card>
-      {category.children?.map(child => renderCategoryTree(child, level + 1))}
-    </Box>
-  );
+  const handleDelete = async (categoryId) => {
+    if (window.confirm('Êtes-vous sûr de vouloir supprimer cette catégorie ?')) {
+      try {
+        setError('');
+        await adminAPI.deleteCategory(categoryId);
+        await fetchCategories(currentCategory?.id || null);
+      } catch (error) {
+        console.error('Error deleting category:', error);
+        setError(error.response?.data?.message || 'Impossible de supprimer une catégorie qui contient des sous-catégories');
+      }
+    }
+  };
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
-      <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Typography variant="h4" component="h1">
-          Gestion des Catégories
-        </Typography>
-        <Box>
-          <Button
-            variant="outlined"
-            sx={{ mr: 2 }}
-            onClick={() => setViewMode(viewMode === 'all' ? 'tree' : 'all')}
-          >
-            {viewMode === 'all' ? 'Vue arborescente' : 'Vue simple'}
-          </Button>
-          <Button
-            variant="contained"
-            color="primary"
-            startIcon={<AddIcon />}
-            onClick={() => {
-              resetForm();
-              setOpen(true);
-            }}
-          >
-            Nouvelle Catégorie
-          </Button>
-        </Box>
-      </Box>
-
-      {alert.show && (
-        <Alert severity={alert.type} sx={{ mb: 3 }}>
-          {alert.message}
+    <div style={{ padding: '20px' }}>
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
         </Alert>
       )}
 
-      {viewMode === 'tree' ? (
-        <Box>
-          {buildCategoryTree(categories).map(category => renderCategoryTree(category))}
-        </Box>
-      ) : (
-        <Grid container spacing={4}>
-          {categories.map((category) => (
-            <Grid item key={category.id} xs={12} sm={6} md={4}>
-              <Card sx={{ height: '100%' }}>
-                <CardMedia
-                  component="img"
-                  height="200"
-                  image={category.imageUrl || '/placeholder.jpg'}
-                  alt={category.name}
-                  sx={{ objectFit: 'cover' }}
-                />
-                <Box sx={{ p: 2 }}>
-                  {category.parentCategoryId && (
-                    <Chip 
-                      label={getParentPath(category)}
-                      size="small"
-                      sx={{ mb: 1 }}
-                    />
-                  )}
-                  <Typography variant="h6" gutterBottom>
-                    {category.name}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                    {category.description || 'Aucune description'}
-                  </Typography>
-                  <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-                    <IconButton
-                      color="primary"
-                      onClick={() => handleEditCategory(category)}
-                    >
-                      <EditIcon />
-                    </IconButton>
-                    <IconButton
-                      color="error"
-                      onClick={() => handleDeleteCategory(category.id)}
-                    >
-                      <DeleteIcon />
-                    </IconButton>
-                  </Box>
-                </Box>
-              </Card>
-            </Grid>
+      <Box mb={3}>
+        <Breadcrumbs aria-label="breadcrumb">
+          <Button
+            disabled={categoryPath.length === 0}
+            onClick={handleNavigateBack}
+            startIcon={<ArrowBackIcon />}
+          >
+            Retour
+          </Button>
+          {categoryPath.map((cat) => (
+            <Typography key={cat.id} color="text.primary">
+              {cat.name}
+            </Typography>
           ))}
-        </Grid>
-      )}
+        </Breadcrumbs>
+      </Box>
 
-      <Dialog 
-        open={open} 
-        onClose={() => {
-          setOpen(false);
-          resetForm();
-        }}
-        maxWidth="sm"
-        fullWidth
-      >
+      <Box mb={3}>
+        <Button
+          variant="contained"
+          color="primary"
+          startIcon={<AddIcon />}
+          onClick={() => handleOpenDialog()}
+        >
+          Ajouter une {currentCategory ? 'sous-' : ''}catégorie
+        </Button>
+      </Box>
+
+      <List>
+        {categories.map((category) => (
+          <Card key={category.id} style={{ marginBottom: '10px' }}>
+            <CardContent>
+              <Box display="flex" alignItems="center" justifyContent="space-between">
+                <Box display="flex" alignItems="center" style={{ flex: 1 }}>
+                  <FolderIcon style={{ marginRight: '10px' }} />
+                  <ListItemText
+                    primary={category.name}
+                    secondary={
+                      <>
+                        {category.description}
+                        <br />
+                        {`${category.subCategories.length} sous-catégories, ${category.productCount} produits`}
+                      </>
+                    }
+                  />
+                </Box>
+                <Box>
+                  <IconButton
+                    color="primary"
+                    onClick={() => handleNavigateToCategory(category)}
+                  >
+                    <FolderIcon />
+                  </IconButton>
+                  <IconButton
+                    color="primary"
+                    onClick={() => handleOpenDialog(category)}
+                  >
+                    <EditIcon />
+                  </IconButton>
+                  <IconButton
+                    color="error"
+                    onClick={() => handleDelete(category.id)}
+                  >
+                    <DeleteIcon />
+                  </IconButton>
+                </Box>
+              </Box>
+            </CardContent>
+          </Card>
+        ))}
+        {categories.length === 0 && (
+          <Typography color="text.secondary" align="center">
+            Aucune catégorie trouvée
+          </Typography>
+        )}
+      </List>
+
+      <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
         <DialogTitle>
           {editMode ? 'Modifier la catégorie' : 'Nouvelle catégorie'}
         </DialogTitle>
         <DialogContent>
-          <Box sx={{ pt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <TextField
-              autoFocus
-              label="Nom de la catégorie"
-              fullWidth
-              value={newCategory.name}
-              onChange={(e) => setNewCategory({ ...newCategory, name: e.target.value })}
-            />
-            <FormControl fullWidth>
-              <InputLabel>Catégorie parente</InputLabel>
-              <Select
-                value={newCategory.parentCategoryId}
-                onChange={(e) => setNewCategory({ ...newCategory, parentCategoryId: e.target.value })}
-                label="Catégorie parente"
-              >
-                <MenuItem value="">
-                  <em>Aucune (catégorie principale)</em>
-                </MenuItem>
-                {categories.map((category) => (
-                  <MenuItem 
-                    key={category.id} 
-                    value={category.id}
-                    disabled={editMode && category.id === selectedCategory?.id}
-                  >
-                    {category.path}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            <TextField
-              label="Description"
-              fullWidth
-              multiline
-              rows={4}
-              value={newCategory.description}
-              onChange={(e) => setNewCategory({ ...newCategory, description: e.target.value })}
-            />
-            <ImageUpload
-              currentImage={newCategory.imageUrl}
-              onImageSelect={(imageData) => setNewCategory({ ...newCategory, imageUrl: imageData })}
-            />
-          </Box>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="Nom"
+            type="text"
+            fullWidth
+            value={categoryData.name}
+            onChange={(e) =>
+              setCategoryData({ ...categoryData, name: e.target.value })
+            }
+          />
+          <TextField
+            margin="dense"
+            label="Description"
+            type="text"
+            fullWidth
+            multiline
+            rows={3}
+            value={categoryData.description}
+            onChange={(e) =>
+              setCategoryData({ ...categoryData, description: e.target.value })
+            }
+          />
+          <ImageUpload
+            currentImage={categoryData.imageUrl}
+            onImageSelect={(imageData) => setCategoryData({ ...categoryData, imageUrl: imageData })}
+          />             
         </DialogContent>
         <DialogActions>
+          <Button onClick={handleCloseDialog}>Annuler</Button>
           <Button 
-            onClick={() => {
-              setOpen(false);
-              resetForm();
-            }}
-          >
-            Annuler
-          </Button>
-          <Button 
-            onClick={handleCreateOrUpdateCategory} 
+            onClick={handleSubmit} 
             color="primary"
-            variant="contained"
+            disabled={!categoryData.name.trim()}
           >
-            {editMode ? 'Mettre à jour' : 'Créer'}
+            {editMode ? 'Modifier' : 'Créer'}
           </Button>
         </DialogActions>
       </Dialog>
-    </Container>
+    </div>
   );
-};
-
-export default AdminCategories;
+}

@@ -1,142 +1,237 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { Container, Grid, Card, CardContent, CardMedia, Typography, Box, CircularProgress, Breadcrumbs } from '@mui/material';
+import { 
+  Box, 
+  Grid, 
+  Typography, 
+  CircularProgress,
+  Container,
+  Paper,
+  Breadcrumbs,
+  Chip,
+  useTheme,
+  useMediaQuery,
+  Fade
+} from '@mui/material';
 import { categoriesAPI } from '../../services/api';
+import CategorySidebar from '../../components/CategorySidebar';
+import ProductCard from '../../components/ProductCard';
 
 const Categories = () => {
   const [categories, setCategories] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
   useEffect(() => {
-    const fetchCategories = async () => {
+    const fetchAllCategories = async () => {
       try {
         const response = await categoriesAPI.getAll();
-        setCategories(response.data);
+        // Assurez-vous que les catégories sont bien structurées avec leurs sous-catégories
+        const structuredCategories = response.data;
+        setCategories(structuredCategories);
+        setLoading(false);
       } catch (err) {
         setError('Erreur lors du chargement des catégories');
-      } finally {
         setLoading(false);
       }
     };
 
-    fetchCategories();
+    fetchAllCategories();
   }, []);
 
-  // Organiser les catégories en arbre
-  const buildCategoryTree = (categories) => {
-    const categoryMap = {};
-    const rootCategories = [];
-
-    // Créer un map de toutes les catégories
-    categories.forEach(category => {
-      categoryMap[category.id] = { ...category, children: [] };
-    });
-
-    // Construire l'arbre
-    categories.forEach(category => {
-      if (category.parentCategoryId) {
-        const parent = categoryMap[category.parentCategoryId];
-        if (parent) {
-          parent.children.push(categoryMap[category.id]);
+  useEffect(() => {
+    const fetchCategoryProducts = async () => {
+      if (selectedCategory) {
+        try {
+          setLoading(true);
+          const response = await categoriesAPI.getProducts(selectedCategory);
+          setProducts(response.data);
+        } catch (err) {
+          setError('Erreur lors du chargement des produits');
+        } finally {
+          setLoading(false);
         }
       } else {
-        rootCategories.push(categoryMap[category.id]);
+        setProducts([]);
       }
-    });
+    };
 
-    return rootCategories;
+    fetchCategoryProducts();
+  }, [selectedCategory]);
+
+  const handleCategorySelect = (categoryId) => {
+    setSelectedCategory(categoryId);
   };
 
-  const renderCategoryCard = (category, level = 0) => (
-    <React.Fragment key={category.id}>
-      <Grid item xs={12} sm={6} md={4} lg={3}>
-        <Card 
-          component={Link} 
-          to={`/categories/${category.id}`}
-          sx={{ 
-            height: '100%', 
-            display: 'flex', 
-            flexDirection: 'column',
-            textDecoration: 'none',
-            transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
-            '&:hover': {
-              transform: 'translateY(-8px)',
-              boxShadow: '0 8px 20px rgba(0,0,0,0.1)'
-            }
-          }}
-        >
-          <CardMedia
-            component="img"
-            height="240"
-            image={category.imageUrl || '/placeholder.jpg'}
-            alt={category.name}
-            sx={{ 
-              objectFit: 'cover',
-              backgroundPosition: 'center'
-            }}
-          />
-          <CardContent sx={{ flexGrow: 1 }}>
-            <Typography gutterBottom variant="h5" component="h2" color="primary.main">
-              {category.name}
-            </Typography>
-            {category.path && (
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                {category.path.split('/').join(' > ')}
-              </Typography>
-            )}
-            {category.description && (
-              <Typography variant="body2" color="text.secondary">
-                {category.description}
-              </Typography>
-            )}
-            {category.children?.length > 0 && (
-              <Typography variant="body2" color="primary" sx={{ mt: 2 }}>
-                {category.children.length} sous-catégorie{category.children.length > 1 ? 's' : ''}
-              </Typography>
-            )}
-          </CardContent>
-        </Card>
-      </Grid>
-      {category.children?.map(child => renderCategoryCard(child, level + 1))}
-    </React.Fragment>
-  );
+  const selectedCategoryData = categories.find(cat => cat.id === selectedCategory) || 
+                             categories.flatMap(cat => cat.subCategories || [])
+                                      .find(subCat => subCat.id === selectedCategory);
 
-  if (loading) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
-        <CircularProgress />
-      </Box>
-    );
-  }
-
-  if (error) {
-    return (
-      <Container>
-        <Typography color="error" align="center" sx={{ mt: 4 }}>
-          {error}
-        </Typography>
-      </Container>
-    );
-  }
-
-  const categoryTree = buildCategoryTree(categories);
+  const getBreadcrumbPath = (category) => {
+    if (!category) return [];
+    const path = [];
+    let current = category;
+    while (current) {
+      path.unshift(current);
+      current = categories.find(cat => cat.id === current.parentCategoryId);
+    }
+    return path;
+  };
 
   return (
-    <Container maxWidth="xl" sx={{ py: 8 }}>
-      <Box sx={{ mb: 6, textAlign: 'center' }}>
-        <Typography variant="h3" component="h1" gutterBottom>
-          Nos Catégories
-        </Typography>
-        <Typography variant="subtitle1" color="text.secondary" sx={{ maxWidth: '800px', mx: 'auto' }}>
-          Découvrez notre sélection de pierres précieuses et de bijoux artisanaux, soigneusement organisée par catégories pour faciliter votre navigation
-        </Typography>
-      </Box>
+    <Box 
+      sx={{ 
+        display: 'flex',
+        minHeight: 'calc(100vh - 70px)',
+        mt: '70px',
+        backgroundColor: '#f5f5f7'
+      }}
+    >
+      {!isMobile && (
+        <CategorySidebar 
+          categories={categories}
+          onCategorySelect={handleCategorySelect}
+        />
+      )}
+      
+      <Box 
+        component={Container} 
+        maxWidth="xl" 
+        sx={{ 
+          flexGrow: 1, 
+          p: 4,
+          transition: 'all 0.3s ease'
+        }}
+      >
+        {error && (
+          <Paper 
+            elevation={0}
+            sx={{ 
+              p: 2, 
+              mb: 3, 
+              backgroundColor: '#fff3f3',
+              color: 'error.main',
+              borderRadius: 2
+            }}
+          >
+            <Typography>{error}</Typography>
+          </Paper>
+        )}
 
-      <Grid container spacing={4}>
-        {categoryTree.map(category => renderCategoryCard(category))}
-      </Grid>
-    </Container>
+        <Paper 
+          elevation={0} 
+          sx={{ 
+            p: 3, 
+            mb: 4, 
+            borderRadius: 2,
+            backgroundColor: 'white'
+          }}
+        >
+          <Typography 
+            variant="h4" 
+            gutterBottom
+            sx={{ 
+              fontWeight: 700,
+              mb: 2
+            }}
+          >
+            {selectedCategoryData?.name || 'Toutes les catégories'}
+          </Typography>
+
+          {selectedCategoryData && (
+            <Box sx={{ mb: 3 }}>
+              <Breadcrumbs separator="›" sx={{ mb: 2 }}>
+                {getBreadcrumbPath(selectedCategoryData).map((cat, index) => (
+                  <Typography 
+                    key={cat.id}
+                    color={index === getBreadcrumbPath(selectedCategoryData).length - 1 ? 'primary' : 'inherit'}
+                    sx={{ 
+                      cursor: 'pointer',
+                      '&:hover': { color: 'primary.main' }
+                    }}
+                    onClick={() => handleCategorySelect(cat.id)}
+                  >
+                    {cat.name}
+                  </Typography>
+                ))}
+              </Breadcrumbs>
+              {selectedCategoryData.description && (
+                <Typography 
+                  variant="body1" 
+                  color="text.secondary"
+                  sx={{ mb: 2 }}
+                >
+                  {selectedCategoryData.description}
+                </Typography>
+              )}
+            </Box>
+          )}
+
+          {loading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+              <CircularProgress />
+            </Box>
+          ) : (
+            <Fade in={!loading} timeout={500}>
+              <Grid 
+                container 
+                spacing={3}
+                sx={{ 
+                  mt: 1,
+                  animation: 'fadeIn 0.5s ease-in-out'
+                }}
+              >
+                {products.map((product) => (
+                  <Grid 
+                    item 
+                    key={product.id} 
+                    xs={12} 
+                    sm={6} 
+                    md={4} 
+                    lg={3}
+                    sx={{
+                      transition: 'transform 0.3s ease-in-out',
+                      '&:hover': {
+                        transform: 'scale(1.02)',
+                      }
+                    }}
+                  >
+                    <ProductCard product={product} />
+                  </Grid>
+                ))}
+                {products.length === 0 && !loading && (
+                  <Grid item xs={12}>
+                    <Paper 
+                      elevation={0}
+                      sx={{ 
+                        p: 4, 
+                        textAlign: 'center',
+                        backgroundColor: '#f8f9fa',
+                        borderRadius: 2
+                      }}
+                    >
+                      <Typography 
+                        variant="body1" 
+                        color="text.secondary"
+                        sx={{ 
+                          fontStyle: 'italic',
+                          fontSize: '1.1rem'
+                        }}
+                      >
+                        Aucun produit dans cette catégorie
+                      </Typography>
+                    </Paper>
+                  </Grid>
+                )}
+              </Grid>
+            </Fade>
+          )}
+        </Paper>
+      </Box>
+    </Box>
   );
 };
 

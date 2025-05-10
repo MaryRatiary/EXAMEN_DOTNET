@@ -58,7 +58,7 @@ const Home = () => {
             </Grid>
             <Grid item xs={12} md={6}>
               <img 
-                src="/public/collection amethyste.jpeg" 
+                src="/collection amethyste.jpeg" 
                 alt="Collections de pierres précieuses"
                 className="w-full rounded-lg shadow-xl"
               />

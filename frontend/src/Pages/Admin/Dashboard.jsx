@@ -7,29 +7,22 @@ import {
   Paper,
   Typography,
   Box,
-  Card,
-  CardContent,
   Table,
   TableBody,
   TableCell,
+  TableContainer,
   TableHead,
   TableRow,
   Button,
   Alert,
   CircularProgress,
-  Stack,
 } from '@mui/material';
-import { 
-  People as PeopleIcon,
-  ShoppingCart as ShoppingCartIcon,
-  Inventory as InventoryIcon 
-} from '@mui/icons-material';
-import { api } from '../../services/api';
+import { adminAPI } from '../../services/api';
 
 const Dashboard = () => {
   const { user } = useSelector((state) => state.auth);
   const [stats, setStats] = useState(null);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
@@ -37,12 +30,12 @@ const Dashboard = () => {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
-        setError(null);
-        const response = await api.get('/admin/dashboard');
+        setError('');
+        const response = await adminAPI.getDashboardStats();
         setStats(response.data);
-      } catch (error) {
-        setError(error.response?.data?.message || 'Erreur lors du chargement des données');
-        console.error('Error fetching dashboard data:', error);
+      } catch (err) {
+        setError(err.response?.data?.message || 'Erreur lors du chargement des données');
+        console.error('Error fetching dashboard data:', err);
       } finally {
         setLoading(false);
       }
@@ -59,24 +52,23 @@ const Dashboard = () => {
 
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh">
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
         <CircularProgress />
       </Box>
     );
   }
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 8, mb: 4 }}>
-      <Stack direction="row" alignItems="center" justifyContent="space-between" mb={4}>
-        <Typography variant="h4" component="h1" gutterBottom>
+    <Container maxWidth="lg" sx={{ py: 4 }}>
+      <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Typography variant="h4" component="h1">
           Tableau de Bord Admin
         </Typography>
         <Box>
           <Button
-            variant="contained"
-            color="primary"
-            onClick={() => navigate('/admin/categories')}
+            variant="outlined"
             sx={{ mr: 2 }}
+            onClick={() => navigate('/admin/categories')}
           >
             Gérer les Catégories
           </Button>
@@ -88,7 +80,7 @@ const Dashboard = () => {
             Gérer les Produits
           </Button>
         </Box>
-      </Stack>
+      </Box>
 
       {error && (
         <Alert severity="error" sx={{ mb: 4 }}>
@@ -98,138 +90,101 @@ const Dashboard = () => {
 
       {stats && (
         <>
-          {/* Stats Overview */}
           <Grid container spacing={3} mb={4}>
-            <Grid item xs={12} md={4}>
-              <Paper elevation={3} sx={{ p: 3, bgcolor: 'primary.light', color: 'white' }}>
-                <Box display="flex" alignItems="center">
-                  <PeopleIcon sx={{ fontSize: 40, mr: 2 }} />
-                  <Box>
-                    <Typography variant="h6" component="h2">
-                      Utilisateurs
-                    </Typography>
-                    <Typography variant="h4">{stats.totalUsers}</Typography>
-                  </Box>
-                </Box>
+            <Grid item xs={12} sm={6} md={4}>
+              <Paper sx={{ p: 3, textAlign: 'center' }}>
+                <Typography variant="h6" gutterBottom>
+                  Utilisateurs
+                </Typography>
+                <Typography variant="h4">
+                  {stats.totalUsers}
+                </Typography>
               </Paper>
             </Grid>
-            <Grid item xs={12} md={4}>
-              <Paper elevation={3} sx={{ p: 3, bgcolor: 'success.light', color: 'white' }}>
-                <Box display="flex" alignItems="center">
-                  <ShoppingCartIcon sx={{ fontSize: 40, mr: 2 }} />
-                  <Box>
-                    <Typography variant="h6" component="h2">
-                      Commandes
-                    </Typography>
-                    <Typography variant="h4">{stats.totalOrders}</Typography>
-                  </Box>
-                </Box>
+            <Grid item xs={12} sm={6} md={4}>
+              <Paper sx={{ p: 3, textAlign: 'center' }}>
+                <Typography variant="h6" gutterBottom>
+                  Commandes
+                </Typography>
+                <Typography variant="h4">
+                  {stats.totalOrders}
+                </Typography>
               </Paper>
             </Grid>
-            <Grid item xs={12} md={4}>
-              <Paper elevation={3} sx={{ p: 3, bgcolor: 'warning.light', color: 'white' }}>
-                <Box display="flex" alignItems="center">
-                  <InventoryIcon sx={{ fontSize: 40, mr: 2 }} />
-                  <Box>
-                    <Typography variant="h6" component="h2">
-                      Produits
-                    </Typography>
-                    <Typography variant="h4">{stats.totalProducts}</Typography>
-                  </Box>
-                </Box>
+            <Grid item xs={12} sm={6} md={4}>
+              <Paper sx={{ p: 3, textAlign: 'center' }}>
+                <Typography variant="h6" gutterBottom>
+                  Produits
+                </Typography>
+                <Typography variant="h4">
+                  {stats.totalProducts}
+                </Typography>
               </Paper>
             </Grid>
           </Grid>
 
-          {/* Recent Orders */}
           <Grid container spacing={3}>
-            <Grid item xs={12}>
+            <Grid item xs={12} md={8}>
               <Paper sx={{ p: 3 }}>
-                <Typography variant="h6" component="h2" gutterBottom>
-                  Commandes Récentes
+                <Typography variant="h6" gutterBottom>
+                  Commandes récentes
                 </Typography>
-                <Table>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>ID</TableCell>
-                      <TableCell>Utilisateur</TableCell>
-                      <TableCell>Montant</TableCell>
-                      <TableCell>Date</TableCell>
-                      <TableCell>Statut</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {stats.recentOrders.map((order) => (
-                      <TableRow key={order.id} hover>
-                        <TableCell>{order.id}</TableCell>
-                        <TableCell>{order.username}</TableCell>
-                        <TableCell>{order.totalAmount.toFixed(2)} €</TableCell>
-                        <TableCell>
-                          {new Date(order.orderDate).toLocaleDateString('fr-FR', {
-                            day: 'numeric',
-                            month: 'long',
-                            year: 'numeric'
-                          })}
-                        </TableCell>
-                        <TableCell>
-                          <Box
-                            component="span"
-                            sx={{
-                              px: 2,
-                              py: 0.5,
-                              borderRadius: 1,
-                              bgcolor: 
-                                order.status === 'Livré' ? 'success.light' :
-                                order.status === 'En cours' ? 'warning.light' :
-                                'error.light',
-                              color: 'white'
-                            }}
-                          >
-                            {order.status}
-                          </Box>
-                        </TableCell>
+                <TableContainer>
+                  <Table>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>ID</TableCell>
+                        <TableCell>Client</TableCell>
+                        <TableCell>Montant</TableCell>
+                        <TableCell>Date</TableCell>
+                        <TableCell>Statut</TableCell>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHead>
+                    <TableBody>
+                      {stats.recentOrders.map((order) => (
+                        <TableRow key={order.id}>
+                          <TableCell>{order.id}</TableCell>
+                          <TableCell>{order.username}</TableCell>
+                          <TableCell>
+                            {order.totalAmount.toLocaleString('fr-FR', {
+                              style: 'currency',
+                              currency: 'EUR'
+                            })}
+                          </TableCell>
+                          <TableCell>
+                            {new Date(order.orderDate).toLocaleDateString('fr-FR')}
+                          </TableCell>
+                          <TableCell>{order.status}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
               </Paper>
             </Grid>
-
-            {/* Top Selling Products */}
-            <Grid item xs={12}>
-              <Paper sx={{ p: 3, mt: 3 }}>
-                <Typography variant="h6" component="h2" gutterBottom>
-                  Produits les Plus Vendus
+            <Grid item xs={12} md={4}>
+              <Paper sx={{ p: 3 }}>
+                <Typography variant="h6" gutterBottom>
+                  Produits les plus vendus
                 </Typography>
-                <Table>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Produit</TableCell>
-                      <TableCell align="right">Ventes Totales</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {stats.topSellingProducts.map((product) => (
-                      <TableRow key={product.id} hover>
-                        <TableCell>{product.name}</TableCell>
-                        <TableCell align="right">
-                          <Box
-                            component="span"
-                            sx={{
-                              px: 2,
-                              py: 0.5,
-                              borderRadius: 1,
-                              bgcolor: 'primary.light',
-                              color: 'white'
-                            }}
-                          >
-                            {product.totalSold}
-                          </Box>
-                        </TableCell>
+                <TableContainer>
+                  <Table>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Produit</TableCell>
+                        <TableCell align="right">Vendus</TableCell>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHead>
+                    <TableBody>
+                      {stats.topSellingProducts.map((product) => (
+                        <TableRow key={product.id}>
+                          <TableCell>{product.name}</TableCell>
+                          <TableCell align="right">{product.totalSold}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
               </Paper>
             </Grid>
           </Grid>

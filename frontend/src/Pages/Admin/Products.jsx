@@ -28,9 +28,9 @@ import {
   Alert,
 } from '@mui/material';
 import { Edit as EditIcon, Delete as DeleteIcon, Add as AddIcon } from '@mui/icons-material';
-import axios from 'axios';
-import { useSelector } from 'react-redux';
+import { adminAPI, categoriesAPI } from '../../services/api';
 import ImageUpload from '../../components/ImageUpload';
+import HierarchicalCategorySelect from '../../components/HierarchicalCategorySelect';
 
 const Products = () => {
   const [products, setProducts] = useState([]);
@@ -40,7 +40,6 @@ const Products = () => {
   const [editMode, setEditMode] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [alert, setAlert] = useState({ show: false, type: '', message: '' });
-  const { token } = useSelector((state) => state.auth);
   const [newProduct, setNewProduct] = useState({
     name: '',
     description: '',
@@ -57,7 +56,7 @@ const Products = () => {
 
   const fetchProducts = async () => {
     try {
-      const response = await axios.get('http://localhost:5050/api/products');
+      const response = await adminAPI.getProducts();
       setProducts(response.data);
     } catch (error) {
       showAlert('error', 'Erreur lors du chargement des produits');
@@ -66,7 +65,7 @@ const Products = () => {
 
   const fetchCategories = async () => {
     try {
-      const response = await axios.get('http://localhost:5050/api/categories');
+      const response = await categoriesAPI.getAll();
       setCategories(response.data);
     } catch (error) {
       showAlert('error', 'Erreur lors du chargement des catégories');
@@ -97,22 +96,10 @@ const Products = () => {
       };
 
       if (editMode && selectedProduct) {
-        await axios.put(
-          `http://localhost:5050/api/admin/products/${selectedProduct.id}`,
-          productData,
-          {
-            headers: { Authorization: `Bearer ${token}` }
-          }
-        );
+        await adminAPI.updateProduct(selectedProduct.id, productData);
         showAlert('success', 'Produit mis à jour avec succès');
       } else {
-        await axios.post(
-          'http://localhost:5050/api/admin/products',
-          productData,
-          {
-            headers: { Authorization: `Bearer ${token}` }
-          }
-        );
+        await adminAPI.createProduct(productData);
         showAlert('success', 'Produit créé avec succès');
       }
       setOpen(false);
@@ -126,9 +113,7 @@ const Products = () => {
   const handleDeleteProduct = async (id) => {
     if (window.confirm('Êtes-vous sûr de vouloir supprimer ce produit ?')) {
       try {
-        await axios.delete(`http://localhost:5050/api/admin/products/${id}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        await adminAPI.deleteProduct(id);
         showAlert('success', 'Produit supprimé avec succès');
         fetchProducts();
       } catch (error) {
@@ -184,21 +169,14 @@ const Products = () => {
         </Alert>
       )}
 
-      <FormControl fullWidth sx={{ mb: 4 }}>
-        <InputLabel>Filtrer par catégorie</InputLabel>
-        <Select
+      <Box sx={{ mb: 4 }}>
+        <HierarchicalCategorySelect
+          categories={categories}
           value={selectedCategory}
           onChange={(e) => setSelectedCategory(e.target.value)}
           label="Filtrer par catégorie"
-        >
-          <MenuItem value="all">Toutes les catégories</MenuItem>
-          {categories.map((category) => (
-            <MenuItem key={category.id} value={category.id}>
-              {category.name}
-            </MenuItem>
-          ))}
-        </Select>
-      </FormControl>
+        />
+      </Box>
 
       <Grid container spacing={4}>
         {filteredProducts.map((product) => (
@@ -304,38 +282,18 @@ const Products = () => {
                 />
               </Grid>
             </Grid>
-            <FormControl fullWidth>
-              <InputLabel>Catégorie</InputLabel>
-              <Select
-                value={newProduct.categoryId}
-                onChange={(e) => setNewProduct({ ...newProduct, categoryId: e.target.value })}
-                label="Catégorie"
-              >
-                {categories.map((category) => (
-                  <MenuItem key={category.id} value={category.id}>
-                    {category.name}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+
+            <HierarchicalCategorySelect
+              categories={categories}
+              value={newProduct.categoryId}
+              onChange={(e) => setNewProduct({ ...newProduct, categoryId: e.target.value })}
+              label="Catégorie"
+            />
+
             <ImageUpload
               currentImage={newProduct.imageUrl}
               onImageSelect={(imageData) => setNewProduct({ ...newProduct, imageUrl: imageData })}
             />
-            {newProduct.imageUrl && (
-              <Box sx={{ mt: 2 }}>
-                <img
-                  src={newProduct.imageUrl}
-                  alt="Aperçu"
-                  style={{ 
-                    width: '100%', 
-                    height: '200px', 
-                    objectFit: 'cover',
-                    borderRadius: '4px'
-                  }}
-                />
-              </Box>
-            )}
           </Box>
         </DialogContent>
         <DialogActions>
